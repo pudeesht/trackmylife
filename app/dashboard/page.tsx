@@ -5,45 +5,51 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase/client";
+import { DayDetailModal } from "@/components/dashboard/DayDetailModal";
+import {
+  buildCurrentWeek,
+  buildMonthGrid,
+  buildYearMonthBlocks,
+  computeStats,
+  getRecentEntries,
+  toDateKey,
+} from "@/components/dashboard/dashboard-helpers";
+import type { DailyEntry, ViewMode } from "@/components/dashboard/dashboard-types";
+import { HeatmapLegend } from "@/components/dashboard/HeatmapLegend";
+import { LogPanel } from "@/components/dashboard/LogPanel";
+import { HeatmapMonth } from "@/components/dashboard/HeatmapMonth";
+import { HeatmapWeek } from "@/components/dashboard/HeatmapWeek";
+import { HeatmapYear } from "@/components/dashboard/HeatmapYear";
+import { ProfileHeader } from "@/components/dashboard/ProfileHeader";
+import { StatsGrid } from "@/components/dashboard/StatsGrid";
+import { TimeViewToggle } from "@/components/dashboard/TimeViewToggle";
 
-type DailyEntry = {
-  id: number;
-  user_id: string;
-  entry_date: string;
-  score: number;
-  note: string | null;
-  created_at: string;
-  updated_at: string;
-};
-
-function getLocalDateString(date = new Date()): string {
-  const offsetMs = date.getTimezoneOffset() * 60_000;
-  return new Date(date.getTime() - offsetMs).toISOString().slice(0, 10);
-}
-
-function formatDateLabel(yyyyMmDd: string): string {
-  const [year, month, day] = yyyyMmDd.split("-").map(Number);
-  const date = new Date(year, month - 1, day);
-  return date.toLocaleDateString(undefined, {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+function getEmailPrefix(email: string): string {
+  const [prefix] = email.split("@");
+  return prefix || "user";
 }
 
 export default function DashboardPage() {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [isCheckingSession, setIsCheckingSession] = useState(true);
+
   const [entries, setEntries] = useState<DailyEntry[]>([]);
-  const [selectedDate, setSelectedDate] = useState(getLocalDateString());
+  const [selectedDate, setSelectedDate] = useState(toDateKey());
   const [score, setScore] = useState<number>(7);
   const [note, setNote] = useState("");
+
   const [isLoadingEntries, setIsLoadingEntries] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const [viewMode, setViewMode] = useState<ViewMode>("year");
+  const [activeMonth, setActiveMonth] = useState<number>(new Date().getMonth());
+  const [activeModalEntry, setActiveModalEntry] = useState<DailyEntry | null>(null);
+
+  const today = useMemo(() => new Date(), []);
+  const currentYear = today.getFullYear();
 
   const loadEntries = useCallback(async (userId: string) => {
     setIsLoadingEntries(true);
@@ -54,7 +60,7 @@ export default function DashboardPage() {
       .select("id, user_id, entry_date, score, note, created_at, updated_at")
       .eq("user_id", userId)
       .order("entry_date", { ascending: false })
-      .limit(30);
+      .limit(500);
 
     if (loadError) {
       setError(
@@ -120,11 +126,22 @@ export default function DashboardPage() {
     };
   }, [loadEntries, router]);
 
-  const email = useMemo(() => user?.email ?? "", [user?.email]);
-  const selectedEntry = useMemo(
-    () => entries.find((entry) => entry.entry_date === selectedDate),
-    [entries, selectedDate]
+  const email = user?.email ?? "";
+  const username = useMemo(() => getEmailPrefix(email), [email]);
+
+  const selectedEntry = entries.find((entry) => entry.entry_date === selectedDate);
+  const stats = useMemo(() => computeStats(entries, currentYear), [entries, currentYear]);
+  const recent = useMemo(() => getRecentEntries(entries), [entries]);
+
+  const yearMonthBlocks = useMemo(
+    () => buildYearMonthBlocks(currentYear, entries, today),
+    [currentYear, entries, today]
   );
+  const monthCells = useMemo(
+    () => buildMonthGrid(currentYear, activeMonth, entries, today),
+    [activeMonth, currentYear, entries, today]
+  );
+  const weekCells = useMemo(() => buildCurrentWeek(today, entries), [today, entries]);
 
   async function handleLogout() {
     await supabase.auth.signOut();
@@ -171,6 +188,13 @@ export default function DashboardPage() {
     setIsSaving(false);
   }
 
+  function openDayDetailByDate(dateKey: string) {
+    const entry = entries.find((item) => item.entry_date === dateKey);
+    if (entry) {
+      setActiveModalEntry(entry);
+    }
+  }
+
   function handleDateChange(nextDate: string) {
     setSelectedDate(nextDate);
 
@@ -187,6 +211,11 @@ export default function DashboardPage() {
     setError(null);
   }
 
+  function handleMonthClick(monthIndex: number) {
+    setActiveMonth(monthIndex);
+    setViewMode("month");
+  }
+
   if (isCheckingSession) {
     return (
       <main className="mx-auto flex min-h-screen w-full max-w-3xl items-center justify-center px-6 py-12">
@@ -196,137 +225,70 @@ export default function DashboardPage() {
   }
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col px-6 py-12">
-      <header className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-semibold uppercase tracking-wide text-emerald-700">TrackMyLife</p>
-          <h1 className="mt-1 text-2xl font-semibold text-zinc-900">Dashboard</h1>
-          <p className="mt-1 text-sm text-zinc-600">Signed in as {email}</p>
-        </div>
-        <button
-          onClick={handleLogout}
-          className="rounded-lg border border-zinc-300 px-3 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-100"
-        >
-          Log out
-        </button>
-      </header>
+    <>
+      <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-6 py-8">
+        <ProfileHeader username={username} onLogout={handleLogout} />
+        <StatsGrid stats={stats} />
 
-      <section className="mt-8 rounded-2xl border border-zinc-200 bg-white p-5">
-        <div className="mb-5 flex items-start justify-between gap-4">
-          <div>
-            <h2 className="text-lg font-semibold text-zinc-900">Daily check-in</h2>
-            <p className="mt-1 text-sm text-zinc-600">
-              Rate your day from 1-10. You can edit any past day later.
-            </p>
-          </div>
-          {selectedEntry ? (
-            <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-medium text-zinc-700">
-              Existing entry found
-            </span>
-          ) : null}
-        </div>
-
-        <form onSubmit={handleSaveEntry} className="space-y-4">
-          <div className="space-y-1">
-            <label htmlFor="entry-date" className="text-sm font-medium text-zinc-700">
-              Date
-            </label>
-            <input
-              id="entry-date"
-              type="date"
-              value={selectedDate}
-              onChange={(event) => handleDateChange(event.target.value)}
-              className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm outline-none ring-emerald-500 focus:ring"
-            />
-            <p className="text-xs text-zinc-500">{formatDateLabel(selectedDate)}</p>
-          </div>
-
-          <div className="space-y-2">
-            <label htmlFor="score" className="text-sm font-medium text-zinc-700">
-              Score: <span className="font-semibold text-zinc-900">{score}</span>/10
-            </label>
-            <input
-              id="score"
-              type="range"
-              min={1}
-              max={10}
-              step={1}
-              value={score}
-              onChange={(event) => setScore(Number(event.target.value))}
-              className="w-full"
-            />
-            <div className="flex justify-between text-xs text-zinc-500">
-              <span>1 (rough day)</span>
-              <span>10 (great day)</span>
+        <div className="mt-6 grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <section>
+            <div className="flex items-center justify-between gap-4">
+              <TimeViewToggle mode={viewMode} onChange={setViewMode} />
+              <p className="text-xs text-zinc-500">Hover cells for date and note preview</p>
             </div>
-          </div>
 
-          <div className="space-y-1">
-            <label htmlFor="note" className="text-sm font-medium text-zinc-700">
-              Optional note
-            </label>
-            <textarea
-              id="note"
-              value={note}
-              onChange={(event) => setNote(event.target.value)}
-              placeholder="What shaped your day?"
-              rows={4}
-              maxLength={500}
-              className="w-full resize-y rounded-lg border border-zinc-300 px-3 py-2 text-sm outline-none ring-emerald-500 focus:ring"
-            />
-            <p className="text-xs text-zinc-500">{note.length}/500</p>
-          </div>
+            <div className="transition-all duration-300">
+              {viewMode === "year" ? (
+                <HeatmapYear
+                  monthBlocks={yearMonthBlocks}
+                  onMonthClick={handleMonthClick}
+                  onCellClick={(cell) => openDayDetailByDate(cell.dateKey)}
+                />
+              ) : null}
 
-          {error ? <p className="text-sm text-red-600">{error}</p> : null}
-          {feedback ? <p className="text-sm text-emerald-700">{feedback}</p> : null}
+              {viewMode === "month" ? (
+                <HeatmapMonth
+                  monthTitle={new Date(currentYear, activeMonth, 1).toLocaleDateString(undefined, {
+                    month: "long",
+                    year: "numeric",
+                  })}
+                  cells={monthCells}
+                  onCellClick={(cell) => openDayDetailByDate(cell.dateKey)}
+                />
+              ) : null}
 
-          <button
-            type="submit"
-            disabled={isSaving || isLoadingEntries}
-            className="rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-70"
-          >
-            {isSaving ? "Saving..." : selectedEntry ? "Update entry" : "Save entry"}
-          </button>
-        </form>
-      </section>
+              {viewMode === "week" ? (
+                <HeatmapWeek cells={weekCells} onCellClick={(cell) => openDayDetailByDate(cell.dateKey)} />
+              ) : null}
+            </div>
 
-      <section className="mt-6 rounded-2xl border border-zinc-200 bg-white p-5">
-        <h2 className="text-lg font-semibold text-zinc-900">Recent entries</h2>
-        <p className="mt-1 text-sm text-zinc-600">Latest 30 days you have logged.</p>
+            <HeatmapLegend />
+          </section>
 
-        {isLoadingEntries ? <p className="mt-4 text-sm text-zinc-600">Loading history...</p> : null}
+          <LogPanel
+            selectedDate={selectedDate}
+            score={score}
+            note={note}
+            selectedEntry={selectedEntry}
+            isSaving={isSaving}
+            isLoadingEntries={isLoadingEntries}
+            feedback={feedback}
+            error={error}
+            onDateChange={handleDateChange}
+            onScoreChange={setScore}
+            onNoteChange={setNote}
+            onSubmit={handleSaveEntry}
+            recentEntries={recent}
+            onOpenEntry={setActiveModalEntry}
+          />
+        </div>
 
-        {!isLoadingEntries && entries.length === 0 ? (
-          <p className="mt-4 text-sm text-zinc-600">No entries yet. Add your first day above.</p>
-        ) : null}
+        <Link href="/" className="mt-6 text-sm text-zinc-700 underline underline-offset-4">
+          Return to home
+        </Link>
+      </main>
 
-        {entries.length > 0 ? (
-          <div className="mt-4 space-y-2">
-            {entries.map((entry) => (
-              <button
-                key={entry.id}
-                type="button"
-                onClick={() => handleDateChange(entry.entry_date)}
-                className="flex w-full items-start justify-between rounded-lg border border-zinc-200 px-3 py-2 text-left transition hover:bg-zinc-50"
-              >
-                <div>
-                  <p className="text-sm font-medium text-zinc-900">{formatDateLabel(entry.entry_date)}</p>
-                  <p className="mt-1 line-clamp-2 text-xs text-zinc-600">
-                    {entry.note?.trim().length ? entry.note : "No note"}
-                  </p>
-                </div>
-                <span className="rounded-full bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-700">
-                  {entry.score}/10
-                </span>
-              </button>
-            ))}
-          </div>
-        ) : null}
-      </section>
-
-      <Link href="/" className="mt-6 text-sm text-zinc-700 underline underline-offset-4">
-        Return to home
-      </Link>
-    </main>
+      <DayDetailModal entry={activeModalEntry} onClose={() => setActiveModalEntry(null)} />
+    </>
   );
 }
