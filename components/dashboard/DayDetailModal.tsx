@@ -1,4 +1,4 @@
-import { getScoreColor } from "@/components/dashboard/dashboard-helpers";
+import { formatDisplayDate, getScoreColor } from "@/components/dashboard/dashboard-helpers";
 import type { DailyEntry } from "@/components/dashboard/dashboard-types";
 
 type DayDetailModalProps = {
@@ -19,9 +19,7 @@ export function DayDetailModal({ entry, onClose }: DayDetailModalProps) {
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs uppercase tracking-wide text-zinc-500">Day detail</p>
-            <h3 className="mt-1 text-base font-semibold text-zinc-900">
-              {new Date(entry.entry_date).toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long", year: "numeric" })}
-            </h3>
+            <h3 className="mt-1 text-base font-semibold text-zinc-900">{formatDisplayDate(entry.entry_date, { withWeekday: true })}</h3>
           </div>
           <button
             type="button"

@@ -1,3 +1,4 @@
+import { formatDisplayDate } from "@/components/dashboard/dashboard-helpers";
 import type { DailyEntry } from "@/components/dashboard/dashboard-types";
 
 type BestWorstSectionProps = {
@@ -20,7 +21,7 @@ function EntryList({ title, items, onOpen }: { title: string; items: DailyEntry[
             className="flex w-full items-start justify-between rounded-lg border border-zinc-200 px-3 py-2 text-left hover:bg-zinc-50"
           >
             <div>
-              <p className="text-sm font-medium text-zinc-900">{new Date(entry.entry_date).toLocaleDateString()}</p>
+              <p className="text-sm font-medium text-zinc-900">{formatDisplayDate(entry.entry_date)}</p>
               <p className="mt-1 text-xs text-zinc-600">{(entry.note ?? "No note").slice(0, 70)}</p>
             </div>
             <span className="rounded-full bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-700">

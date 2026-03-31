@@ -1,4 +1,4 @@
-import { getScoreColor } from "@/components/dashboard/dashboard-helpers";
+import { formatDisplayDate, getScoreColor } from "@/components/dashboard/dashboard-helpers";
 import type { DailyEntry } from "@/components/dashboard/dashboard-types";
 
 type RecentEntriesListProps = {
@@ -24,7 +24,7 @@ export function RecentEntriesList({ entries, onOpen }: RecentEntriesListProps) {
             >
               <div className="flex items-start gap-2">
                 <div>
-                  <p className="text-sm font-medium text-zinc-900">{new Date(entry.entry_date).toLocaleDateString()}</p>
+                  <p className="text-sm font-medium text-zinc-900">{formatDisplayDate(entry.entry_date)}</p>
                   <p className="mt-0.5 max-w-52.5 truncate text-xs text-zinc-600">{(entry.note ?? "No note").slice(0, 90)}</p>
                 </div>
               </div>

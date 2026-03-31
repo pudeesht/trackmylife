@@ -22,6 +22,19 @@ function addDays(date: Date, days: number): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
 }
 
+export function formatDisplayDate(value: string | Date, options?: { withWeekday?: boolean }): string {
+  const date = typeof value === "string" ? fromDateKey(value) : value;
+  const day = date.getDate();
+  const month = date.toLocaleDateString(undefined, { month: "long" });
+  const yearTwo = date.toLocaleDateString(undefined, { year: "2-digit" });
+  const base = `${day} ${month} '${yearTwo}`;
+  if (options?.withWeekday) {
+    const weekday = date.toLocaleDateString(undefined, { weekday: "long" });
+    return `${weekday}, ${base}`;
+  }
+  return base;
+}
+
 export function getEntryMap(entries: DailyEntry[]): Map<string, DailyEntry> {
   return new Map(entries.map((entry) => [entry.entry_date, entry]));
 }
@@ -62,12 +75,7 @@ export function getCellTooltip(cell: DayCell): string {
     return "";
   }
 
-  const dateLabel = cell.date.toLocaleDateString(undefined, {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+  const dateLabel = `${cell.date.toLocaleDateString(undefined, { weekday: "short" })}, ${formatDisplayDate(cell.date)}`;
 
   if (!cell.entry) {
     return `${dateLabel}\nNo entry logged`;
