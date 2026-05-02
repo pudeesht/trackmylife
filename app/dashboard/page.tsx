@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase/client";
 import { DayDetailModal } from "@/components/dashboard/DayDetailModal";
@@ -10,7 +9,6 @@ import {
   buildCurrentWeek,
   buildMonthGrid,
   buildYearMonthBlocks,
-  computeStats,
   getRecentEntries,
   toDateKey,
 } from "@/components/dashboard/dashboard-helpers";
@@ -21,13 +19,29 @@ import { HeatmapMonth } from "@/components/dashboard/HeatmapMonth";
 import { HeatmapWeek } from "@/components/dashboard/HeatmapWeek";
 import { HeatmapYear } from "@/components/dashboard/HeatmapYear";
 import { ProfileHeader } from "@/components/dashboard/ProfileHeader";
-import { StatsGrid } from "@/components/dashboard/StatsGrid";
+import { PublicProfileSearch } from "@/components/dashboard/PublicProfileSearch";
+import { ProfileSettings } from "@/components/dashboard/ProfileSettings";
 import { TimeViewToggle } from "@/components/dashboard/TimeViewToggle";
 
 function getEmailPrefix(email: string): string {
   const [prefix] = email.split("@");
   return prefix || "user";
 }
+
+function toUsernameCandidate(email: string): string {
+  const raw = getEmailPrefix(email).toLowerCase().replace(/[^a-z0-9_]/g, "");
+  if (raw.length >= 3) {
+    return raw.slice(0, 30);
+  }
+  return "user";
+}
+
+type ProfileRow = {
+  username: string;
+  is_public: boolean;
+};
+
+type UtilityPanel = "none" | "search" | "settings";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -37,7 +51,6 @@ export default function DashboardPage() {
   const [entries, setEntries] = useState<DailyEntry[]>([]);
   const [selectedDate, setSelectedDate] = useState(toDateKey());
   const [score, setScore] = useState<number>(7);
-  const [note, setNote] = useState("");
 
   const [isLoadingEntries, setIsLoadingEntries] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -47,6 +60,9 @@ export default function DashboardPage() {
   const [viewMode, setViewMode] = useState<ViewMode>("year");
   const [activeMonth, setActiveMonth] = useState<number>(new Date().getMonth());
   const [activeModalEntry, setActiveModalEntry] = useState<DailyEntry | null>(null);
+  const [profileUsername, setProfileUsername] = useState<string>("user");
+  const [profileIsPublic, setProfileIsPublic] = useState<boolean>(false);
+  const [activeUtilityPanel, setActiveUtilityPanel] = useState<UtilityPanel>("none");
 
   const today = useMemo(() => new Date(), []);
   const currentYear = today.getFullYear();
@@ -76,14 +92,30 @@ export default function DashboardPage() {
     const match = nextEntries.find((entry) => entry.entry_date === selectedDate);
     if (match) {
       setScore(match.score);
-      setNote(match.note ?? "");
     } else {
       setScore(7);
-      setNote("");
     }
 
     setIsLoadingEntries(false);
   }, [selectedDate]);
+
+  const loadProfile = useCallback(async (userId: string, fallbackEmail: string) => {
+    const fallbackUsername = toUsernameCandidate(fallbackEmail);
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("username, is_public")
+      .eq("user_id", userId)
+      .maybeSingle<ProfileRow>();
+
+    if (error || !data) {
+      setProfileUsername(fallbackUsername);
+      setProfileIsPublic(false);
+      return;
+    }
+
+    setProfileUsername(data.username);
+    setProfileIsPublic(data.is_public);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -101,6 +133,7 @@ export default function DashboardPage() {
       }
 
       setUser(data.session.user);
+      await loadProfile(data.session.user.id, data.session.user.email ?? "");
       await loadEntries(data.session.user.id);
       setIsCheckingSession(false);
     }
@@ -117,6 +150,7 @@ export default function DashboardPage() {
       }
 
       setUser(session.user);
+      loadProfile(session.user.id, session.user.email ?? "");
       loadEntries(session.user.id);
     });
 
@@ -124,13 +158,12 @@ export default function DashboardPage() {
       isMounted = false;
       subscription.unsubscribe();
     };
-  }, [loadEntries, router]);
+  }, [loadEntries, loadProfile, router]);
 
   const email = user?.email ?? "";
-  const username = useMemo(() => getEmailPrefix(email), [email]);
+  const username = useMemo(() => profileUsername || getEmailPrefix(email), [email, profileUsername]);
 
   const selectedEntry = entries.find((entry) => entry.entry_date === selectedDate);
-  const stats = useMemo(() => computeStats(entries, currentYear), [entries, currentYear]);
   const recent = useMemo(() => getRecentEntries(entries), [entries]);
 
   const yearMonthBlocks = useMemo(
@@ -149,7 +182,7 @@ export default function DashboardPage() {
     router.refresh();
   }
 
-  async function handleSaveEntry(event: React.FormEvent<HTMLFormElement>) {
+  async function handleSaveEntry(event: React.FormEvent<HTMLFormElement>, note: string) {
     event.preventDefault();
 
     if (!user) {
@@ -201,11 +234,9 @@ export default function DashboardPage() {
     const match = entries.find((entry) => entry.entry_date === nextDate);
     if (match) {
       setScore(match.score);
-      setNote(match.note ?? "");
       setFeedback("Loaded previous entry for this date.");
     } else {
       setScore(7);
-      setNote("");
       setFeedback(null);
     }
     setError(null);
@@ -227,14 +258,67 @@ export default function DashboardPage() {
   return (
     <>
       <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-6 py-8">
-        <ProfileHeader username={username} onLogout={handleLogout} />
-        <StatsGrid stats={stats} />
+        <ProfileHeader username={username} isPublic={profileIsPublic} onLogout={handleLogout} />
+
+        <section className="mt-2 border-y border-zinc-200 py-2">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setActiveUtilityPanel((panel) => (panel === "search" ? "none" : "search"));
+              }}
+              className={`rounded-md px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition ${
+                activeUtilityPanel === "search"
+                  ? "bg-zinc-900 text-white"
+                  : "border border-zinc-300 text-zinc-700 hover:bg-zinc-50"
+              }`}
+            >
+              Search
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setActiveUtilityPanel((panel) => (panel === "settings" ? "none" : "settings"));
+              }}
+              className={`rounded-md px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition ${
+                activeUtilityPanel === "settings"
+                  ? "bg-zinc-900 text-white"
+                  : "border border-zinc-300 text-zinc-700 hover:bg-zinc-50"
+              }`}
+            >
+              Profile
+            </button>
+          </div>
+
+          {activeUtilityPanel === "search" ? (
+            <div className="mt-3">
+              <PublicProfileSearch currentUsername={username.toLowerCase()} />
+            </div>
+          ) : null}
+
+          {activeUtilityPanel === "settings" && user ? (
+            <div className="mt-3">
+              <ProfileSettings
+                userId={user.id}
+                initialUsername={profileUsername}
+                initialIsPublic={profileIsPublic}
+                compact
+                onUpdated={(next) => {
+                  setProfileUsername(next.username);
+                  setProfileIsPublic(next.isPublic);
+                  setActiveUtilityPanel("none");
+                }}
+              />
+            </div>
+          ) : null}
+        </section>
 
         <div className="mt-6 grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
           <section>
             <div className="flex items-center justify-between gap-4">
               <TimeViewToggle mode={viewMode} onChange={setViewMode} />
-              <p className="text-xs text-zinc-500">Hover cells for date and note preview</p>
+              <p className="text-xs text-zinc-500">Heatmap</p>
             </div>
 
             <div className="transition-all duration-300">
@@ -268,7 +352,6 @@ export default function DashboardPage() {
           <LogPanel
             selectedDate={selectedDate}
             score={score}
-            note={note}
             selectedEntry={selectedEntry}
             isSaving={isSaving}
             isLoadingEntries={isLoadingEntries}
@@ -276,16 +359,12 @@ export default function DashboardPage() {
             error={error}
             onDateChange={handleDateChange}
             onScoreChange={setScore}
-            onNoteChange={setNote}
+            initialNote={selectedEntry?.note ?? ""}
             onSubmit={handleSaveEntry}
             recentEntries={recent}
             onOpenEntry={setActiveModalEntry}
           />
         </div>
-
-        <Link href="/" className="mt-6 text-sm text-zinc-700 underline underline-offset-4">
-          Return to home
-        </Link>
       </main>
 
       <DayDetailModal entry={activeModalEntry} onClose={() => setActiveModalEntry(null)} />

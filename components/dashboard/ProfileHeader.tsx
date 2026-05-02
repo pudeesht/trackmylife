@@ -1,5 +1,6 @@
 type ProfileHeaderProps = {
   username: string;
+  isPublic: boolean;
   onLogout: () => Promise<void>;
 };
 
@@ -11,7 +12,7 @@ function getInitials(username: string): string {
   return username.slice(0, 2).toUpperCase();
 }
 
-export function ProfileHeader({ username, onLogout }: ProfileHeaderProps) {
+export function ProfileHeader({ username, isPublic, onLogout }: ProfileHeaderProps) {
   return (
     <header className="flex items-center justify-between gap-4 py-2">
       <div className="flex items-center gap-3">
@@ -19,8 +20,8 @@ export function ProfileHeader({ username, onLogout }: ProfileHeaderProps) {
           {getInitials(username)}
         </div>
         <p className="text-sm font-medium text-zinc-900">{username}</p>
-        <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700">
-          Public
+        <span className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-[11px] font-semibold text-zinc-700">
+          {isPublic ? "Public" : "Private"}
         </span>
       </div>
 

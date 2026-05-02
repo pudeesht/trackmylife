@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { getScoreColor } from "@/components/dashboard/dashboard-helpers";
 import { RecentEntriesList } from "@/components/dashboard/RecentEntriesList";
 import type { DailyEntry } from "@/components/dashboard/dashboard-types";
@@ -16,8 +16,8 @@ type LogPanelProps = {
   error: string | null;
   onDateChange: (date: string) => void;
   onScoreChange: (score: number) => void;
-  onNoteChange: (note: string) => void;
-  onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
+  initialNote: string;
+  onSubmit: (event: React.FormEvent<HTMLFormElement>, note: string) => void;
   recentEntries?: DailyEntry[];
   onOpenEntry?: (entry: DailyEntry) => void;
 };
@@ -25,7 +25,6 @@ type LogPanelProps = {
 function LogPanelInner({
   selectedDate,
   score,
-  note,
   selectedEntry,
   isSaving,
   isLoadingEntries,
@@ -33,14 +32,21 @@ function LogPanelInner({
   error,
   onDateChange,
   onScoreChange,
-  onNoteChange,
+  initialNote,
   onSubmit,
   recentEntries = [],
   onOpenEntry,
 }: LogPanelProps) {
+  const [draftNote, setDraftNote] = useState(initialNote);
+
   return (
     <aside className="rounded-xl border border-zinc-200 bg-white p-4">
-      <form onSubmit={onSubmit} className="space-y-4">
+      <form
+        onSubmit={(event) => {
+          onSubmit(event, draftNote);
+        }}
+        className="space-y-4"
+      >
         <div>
           <h2 className="text-sm font-semibold text-zinc-900">Log today</h2>
           <p className="mt-1 text-xs text-zinc-500">
@@ -86,8 +92,9 @@ function LogPanelInner({
         <label className="block text-xs font-medium uppercase tracking-wide text-zinc-500">
           Note
           <textarea
-            value={note}
-            onChange={(event) => onNoteChange(event.target.value)}
+            key={selectedDate}
+            value={draftNote}
+            onChange={(event) => setDraftNote(event.target.value)}
             rows={4}
             maxLength={500}
             placeholder="Optional note..."

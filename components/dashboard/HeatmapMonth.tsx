@@ -5,9 +5,10 @@ type HeatmapMonthProps = {
   monthTitle: string;
   cells: DayCell[];
   onCellClick: (cell: DayCell) => void;
+  readOnly?: boolean;
 };
 
-export function HeatmapMonth({ monthTitle, cells, onCellClick }: HeatmapMonthProps) {
+export function HeatmapMonth({ monthTitle, cells, onCellClick, readOnly = false }: HeatmapMonthProps) {
   return (
     <section className="mt-4 transition-all duration-300">
       <h2 className="text-base font-semibold text-zinc-900">{monthTitle}</h2>
@@ -28,7 +29,7 @@ export function HeatmapMonth({ monthTitle, cells, onCellClick }: HeatmapMonthPro
                 className={`${
                   cell.isToday ? "border border-sky-700" : "border border-transparent"
                 } flex h-9 w-9 items-center justify-center rounded-md text-[11px] font-medium transition ${
-                  canOpen ? "cursor-pointer hover:scale-105" : "cursor-default"
+                  canOpen ? `cursor-pointer ${readOnly ? "" : "hover:scale-105"}` : "cursor-default"
                 } ${cell.entry ? "text-white" : "text-zinc-600"}`}
                 style={{
                   ...style,
