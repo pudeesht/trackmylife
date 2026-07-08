@@ -4,6 +4,16 @@ export type DailyEntry = {
   entry_date: string;
   score: number;
   note: string | null;
+  priority_update: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type WeeklyPriority = {
+  id: number;
+  user_id: string;
+  week_start: string;
+  priority: string;
   created_at: string;
   updated_at: string;
 };

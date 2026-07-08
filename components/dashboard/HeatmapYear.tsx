@@ -18,8 +18,8 @@ export function HeatmapYear({ monthBlocks, onMonthClick, onCellClick, readOnly =
         </div>
       ) : null}
 
-      <div className="overflow-x-auto pb-2">
-        <div className="inline-flex min-w-max items-start gap-1.5">
+      <div>
+        <div className="flex flex-wrap items-start gap-x-4 gap-y-3">
           {monthBlocks.map((month) => (
             <article key={month.monthIndex} className="shrink-0">
               <button

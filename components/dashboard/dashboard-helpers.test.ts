@@ -6,6 +6,7 @@ import {
   buildCurrentWeek,
   getCellTooltip,
   getScoreColor,
+  weekStartKey,
 } from "./dashboard-helpers";
 import type { DailyEntry, DayCell } from "./dashboard-types";
 
@@ -15,6 +16,7 @@ const makeEntry = (entry_date: string, score: number, note: string | null = null
   entry_date,
   score,
   note,
+  priority_update: null,
   created_at: `${entry_date}T00:00:00Z`,
   updated_at: `${entry_date}T00:00:00Z`,
 });
@@ -148,5 +150,18 @@ describe("getScoreColor", () => {
   it("clamps scores outside the 1-10 range", () => {
     expect(getScoreColor(0)).toBe("#7f0000");
     expect(getScoreColor(11)).toBe("#0d4d3d");
+  });
+});
+
+describe("weekStartKey", () => {
+  it("returns the Sunday date key for any day in the week", () => {
+    // 2026-03-06 is a Friday; that week's Sunday is 2026-03-01.
+    expect(weekStartKey("2026-03-06")).toBe("2026-03-01");
+    // A Sunday maps to itself.
+    expect(weekStartKey("2026-03-01")).toBe("2026-03-01");
+    // Saturday is the last day of the same week.
+    expect(weekStartKey("2026-03-07")).toBe("2026-03-01");
+    // Crossing a month boundary stays correct.
+    expect(weekStartKey("2026-03-02")).toBe("2026-03-01");
   });
 });

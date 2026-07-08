@@ -34,7 +34,7 @@ export default function PublicProfilePage({ params }: ProfilePageProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
 
-  const [activeModalEntry, setActiveModalEntry] = useState<DailyEntry | null>(null);
+  const [activeModalDate, setActiveModalDate] = useState<string | null>(null);
   const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
 
   const today = useMemo(() => new Date(), []);
@@ -91,6 +91,19 @@ export default function PublicProfilePage({ params }: ProfilePageProps) {
     () => [...entries].sort((a, b) => b.entry_date.localeCompare(a.entry_date)),
     [entries]
   );
+  const sortedEntriesAsc = useMemo(
+    () => [...entries].sort((a, b) => a.entry_date.localeCompare(b.entry_date)),
+    [entries]
+  );
+  const activeModalEntry = useMemo(
+    () => (activeModalDate ? entries.find((entry) => entry.entry_date === activeModalDate) ?? null : null),
+    [activeModalDate, entries]
+  );
+  const activeModalIndex = activeModalDate
+    ? sortedEntriesAsc.findIndex((entry) => entry.entry_date === activeModalDate)
+    : -1;
+  const hasPrevModalEntry = activeModalIndex > 0;
+  const hasNextModalEntry = activeModalIndex >= 0 && activeModalIndex < sortedEntriesAsc.length - 1;
   const bestAndWorst = useMemo(() => getBestAndWorst(entries), [entries]);
   const initials = useMemo(() => {
     const clean = (profile?.username ?? routeUsername).replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
@@ -106,7 +119,19 @@ export default function PublicProfilePage({ params }: ProfilePageProps) {
   function openDayDetailByDate(dateKey: string) {
     const entry = entries.find((item) => item.entry_date === dateKey);
     if (entry) {
-      setActiveModalEntry(entry);
+      setActiveModalDate(dateKey);
+    }
+  }
+
+  function handleModalPrev() {
+    if (hasPrevModalEntry) {
+      setActiveModalDate(sortedEntriesAsc[activeModalIndex - 1].entry_date);
+    }
+  }
+
+  function handleModalNext() {
+    if (hasNextModalEntry) {
+      setActiveModalDate(sortedEntriesAsc[activeModalIndex + 1].entry_date);
     }
   }
 
@@ -250,7 +275,7 @@ export default function PublicProfilePage({ params }: ProfilePageProps) {
                 <button
                   key={`best-${entry.id}`}
                   type="button"
-                  onClick={() => setActiveModalEntry(entry)}
+                  onClick={() => setActiveModalDate(entry.entry_date)}
                   className="w-full rounded-md border border-zinc-200 p-3 text-left transition hover:bg-zinc-50"
                 >
                   <div className="flex items-center justify-between gap-4">
@@ -272,7 +297,7 @@ export default function PublicProfilePage({ params }: ProfilePageProps) {
                 <button
                   key={`worst-${entry.id}`}
                   type="button"
-                  onClick={() => setActiveModalEntry(entry)}
+                  onClick={() => setActiveModalDate(entry.entry_date)}
                   className="w-full rounded-md border border-zinc-200 p-3 text-left transition hover:bg-zinc-50"
                 >
                   <div className="flex items-center justify-between gap-4">
@@ -315,7 +340,14 @@ export default function PublicProfilePage({ params }: ProfilePageProps) {
         </section>
       </main>
 
-      <DayDetailModal entry={activeModalEntry} onClose={() => setActiveModalEntry(null)} />
+      <DayDetailModal
+        entry={activeModalEntry}
+        onClose={() => setActiveModalDate(null)}
+        onPrev={handleModalPrev}
+        onNext={handleModalNext}
+        hasPrev={hasPrevModalEntry}
+        hasNext={hasNextModalEntry}
+      />
     </>
   );
 }

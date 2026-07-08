@@ -14,23 +14,25 @@ function getInitials(username: string): string {
 
 export function ProfileHeader({ username, isPublic, onLogout }: ProfileHeaderProps) {
   return (
-    <header className="flex items-center justify-between gap-4 py-2">
-      <div className="flex items-center gap-3">
-        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-zinc-900 text-xs font-semibold text-white">
-          {getInitials(username)}
-        </div>
-        <p className="text-sm font-medium text-zinc-900">{username}</p>
-        <span className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-[11px] font-semibold text-zinc-700">
-          {isPublic ? "Public" : "Private"}
-        </span>
+    <div className="flex items-center gap-3">
+      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-linear-to-br from-emerald-500 to-zinc-900 text-xs font-semibold text-white">
+        {getInitials(username)}
       </div>
+      <p className="text-sm font-medium text-zinc-900">{username}</p>
+      <span
+        className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold ${
+          isPublic ? "bg-emerald-50 text-emerald-700" : "bg-zinc-100 text-zinc-600"
+        }`}
+      >
+        {isPublic ? "Public" : "Private"}
+      </span>
 
       <button
         onClick={onLogout}
-        className="rounded-md px-2.5 py-1 text-sm font-medium text-zinc-700 transition hover:bg-zinc-100"
+        className="ml-1 rounded-lg px-2.5 py-1 text-sm font-medium text-zinc-500 transition hover:bg-zinc-100 hover:text-zinc-900"
       >
         Logout
       </button>
-    </header>
+    </div>
   );
 }

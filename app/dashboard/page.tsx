@@ -9,10 +9,13 @@ import {
   buildCurrentWeek,
   buildMonthGrid,
   buildYearMonthBlocks,
+  formatDisplayDate,
   getRecentEntries,
+  getStreakStats,
   toDateKey,
+  weekStartKey,
 } from "@/components/dashboard/dashboard-helpers";
-import type { DailyEntry, ViewMode } from "@/components/dashboard/dashboard-types";
+import type { DailyEntry, ViewMode, WeeklyPriority } from "@/components/dashboard/dashboard-types";
 import { HeatmapLegend } from "@/components/dashboard/HeatmapLegend";
 import { LogPanel } from "@/components/dashboard/LogPanel";
 import { HeatmapMonth } from "@/components/dashboard/HeatmapMonth";
@@ -21,7 +24,11 @@ import { HeatmapYear } from "@/components/dashboard/HeatmapYear";
 import { ProfileHeader } from "@/components/dashboard/ProfileHeader";
 import { PublicProfileSearch } from "@/components/dashboard/PublicProfileSearch";
 import { ProfileSettings } from "@/components/dashboard/ProfileSettings";
+import { RecentEntriesList } from "@/components/dashboard/RecentEntriesList";
+import { SettingsModal } from "@/components/dashboard/SettingsModal";
+import { StreakBadge } from "@/components/dashboard/StreakBadge";
 import { TimeViewToggle } from "@/components/dashboard/TimeViewToggle";
+import { WeeklyPriorityCard } from "@/components/dashboard/WeeklyPriorityCard";
 
 function getEmailPrefix(email: string): string {
   const [prefix] = email.split("@");
@@ -41,7 +48,7 @@ type ProfileRow = {
   is_public: boolean;
 };
 
-type UtilityPanel = "none" | "search" | "settings";
+type UtilityPanel = "none" | "search";
 
 export default function DashboardPage() {
   const router = useRouter();
@@ -49,20 +56,23 @@ export default function DashboardPage() {
   const [isCheckingSession, setIsCheckingSession] = useState(true);
 
   const [entries, setEntries] = useState<DailyEntry[]>([]);
+  const [weeklyPriorities, setWeeklyPriorities] = useState<WeeklyPriority[]>([]);
   const [selectedDate, setSelectedDate] = useState(toDateKey());
   const [score, setScore] = useState<number>(7);
 
   const [isLoadingEntries, setIsLoadingEntries] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isSavingPriority, setIsSavingPriority] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const [viewMode, setViewMode] = useState<ViewMode>("year");
   const [activeMonth, setActiveMonth] = useState<number>(new Date().getMonth());
-  const [activeModalEntry, setActiveModalEntry] = useState<DailyEntry | null>(null);
+  const [activeModalDate, setActiveModalDate] = useState<string | null>(null);
   const [profileUsername, setProfileUsername] = useState<string>("user");
   const [profileIsPublic, setProfileIsPublic] = useState<boolean>(false);
   const [activeUtilityPanel, setActiveUtilityPanel] = useState<UtilityPanel>("none");
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
   const today = useMemo(() => new Date(), []);
   const currentYear = today.getFullYear();
@@ -73,7 +83,7 @@ export default function DashboardPage() {
 
     const { data, error: loadError } = await supabase
       .from("daily_entries")
-      .select("id, user_id, entry_date, score, note, created_at, updated_at")
+      .select("id, user_id, entry_date, score, note, priority_update, created_at, updated_at")
       .eq("user_id", userId)
       .order("entry_date", { ascending: false })
       .limit(500);
@@ -98,6 +108,17 @@ export default function DashboardPage() {
 
     setIsLoadingEntries(false);
   }, [selectedDate]);
+
+  const loadWeeklyPriorities = useCallback(async (userId: string) => {
+    const { data } = await supabase
+      .from("weekly_priorities")
+      .select("id, user_id, week_start, priority, created_at, updated_at")
+      .eq("user_id", userId)
+      .order("week_start", { ascending: false })
+      .limit(200);
+
+    setWeeklyPriorities((data ?? []) as WeeklyPriority[]);
+  }, []);
 
   const loadProfile = useCallback(async (userId: string, fallbackEmail: string) => {
     const fallbackUsername = toUsernameCandidate(fallbackEmail);
@@ -135,6 +156,7 @@ export default function DashboardPage() {
       setUser(data.session.user);
       await loadProfile(data.session.user.id, data.session.user.email ?? "");
       await loadEntries(data.session.user.id);
+      await loadWeeklyPriorities(data.session.user.id);
       setIsCheckingSession(false);
     }
 
@@ -152,19 +174,34 @@ export default function DashboardPage() {
       setUser(session.user);
       loadProfile(session.user.id, session.user.email ?? "");
       loadEntries(session.user.id);
+      loadWeeklyPriorities(session.user.id);
     });
 
     return () => {
       isMounted = false;
       subscription.unsubscribe();
     };
-  }, [loadEntries, loadProfile, router]);
+  }, [loadEntries, loadWeeklyPriorities, loadProfile, router]);
 
   const email = user?.email ?? "";
   const username = useMemo(() => profileUsername || getEmailPrefix(email), [email, profileUsername]);
 
   const selectedEntry = entries.find((entry) => entry.entry_date === selectedDate);
   const recent = useMemo(() => getRecentEntries(entries), [entries]);
+
+  const sortedEntries = useMemo(
+    () => [...entries].sort((a, b) => a.entry_date.localeCompare(b.entry_date)),
+    [entries]
+  );
+  const activeModalEntry = useMemo(
+    () => (activeModalDate ? entries.find((entry) => entry.entry_date === activeModalDate) ?? null : null),
+    [activeModalDate, entries]
+  );
+  const activeModalIndex = activeModalDate
+    ? sortedEntries.findIndex((entry) => entry.entry_date === activeModalDate)
+    : -1;
+  const hasPrevModalEntry = activeModalIndex > 0;
+  const hasNextModalEntry = activeModalIndex >= 0 && activeModalIndex < sortedEntries.length - 1;
 
   const yearMonthBlocks = useMemo(
     () => buildYearMonthBlocks(currentYear, entries, today),
@@ -175,6 +212,16 @@ export default function DashboardPage() {
     [activeMonth, currentYear, entries, today]
   );
   const weekCells = useMemo(() => buildCurrentWeek(today, entries), [today, entries]);
+  const streak = useMemo(() => getStreakStats(entries, today), [entries, today]);
+
+  const priorityByWeek = useMemo(
+    () => new Map(weeklyPriorities.map((item) => [item.week_start, item.priority])),
+    [weeklyPriorities]
+  );
+  const currentWeekKey = useMemo(() => weekStartKey(toDateKey(today)), [today]);
+  const currentWeekPriority = priorityByWeek.get(currentWeekKey) ?? null;
+  const selectedWeekPriority = priorityByWeek.get(weekStartKey(selectedDate)) ?? null;
+  const currentWeekLabel = `Week of ${formatDisplayDate(currentWeekKey)}`;
 
   async function handleLogout() {
     await supabase.auth.signOut();
@@ -182,7 +229,11 @@ export default function DashboardPage() {
     router.refresh();
   }
 
-  async function handleSaveEntry(event: React.FormEvent<HTMLFormElement>, note: string) {
+  async function handleSaveEntry(
+    event: React.FormEvent<HTMLFormElement>,
+    note: string,
+    priorityUpdate: string
+  ) {
     event.preventDefault();
 
     if (!user) {
@@ -195,6 +246,7 @@ export default function DashboardPage() {
     setError(null);
 
     const cleanNote = note.trim();
+    const cleanPriorityUpdate = priorityUpdate.trim();
 
     const { error: upsertError } = await supabase.from("daily_entries").upsert(
       {
@@ -202,6 +254,7 @@ export default function DashboardPage() {
         entry_date: selectedDate,
         score,
         note: cleanNote.length ? cleanNote : null,
+        priority_update: cleanPriorityUpdate.length ? cleanPriorityUpdate : null,
       },
       {
         onConflict: "user_id,entry_date",
@@ -221,10 +274,59 @@ export default function DashboardPage() {
     setIsSaving(false);
   }
 
+  async function handleSaveWeeklyPriority(text: string) {
+    if (!user) {
+      setError("Please log in again.");
+      return;
+    }
+
+    const cleanPriority = text.trim();
+    if (!cleanPriority) {
+      return;
+    }
+
+    setIsSavingPriority(true);
+    setError(null);
+
+    const { error: upsertError } = await supabase.from("weekly_priorities").upsert(
+      {
+        user_id: user.id,
+        week_start: currentWeekKey,
+        priority: cleanPriority,
+      },
+      {
+        onConflict: "user_id,week_start",
+      }
+    );
+
+    if (upsertError) {
+      setError(
+        "Could not save this week's priority. Confirm supabase/day5_weekly_priorities.sql has been run."
+      );
+      setIsSavingPriority(false);
+      return;
+    }
+
+    await loadWeeklyPriorities(user.id);
+    setIsSavingPriority(false);
+  }
+
   function openDayDetailByDate(dateKey: string) {
     const entry = entries.find((item) => item.entry_date === dateKey);
     if (entry) {
-      setActiveModalEntry(entry);
+      setActiveModalDate(dateKey);
+    }
+  }
+
+  function handleModalPrev() {
+    if (hasPrevModalEntry) {
+      setActiveModalDate(sortedEntries[activeModalIndex - 1].entry_date);
+    }
+  }
+
+  function handleModalNext() {
+    if (hasNextModalEntry) {
+      setActiveModalDate(sortedEntries[activeModalIndex + 1].entry_date);
     }
   }
 
@@ -249,7 +351,7 @@ export default function DashboardPage() {
 
   if (isCheckingSession) {
     return (
-      <main className="mx-auto flex min-h-screen w-full max-w-3xl items-center justify-center px-6 py-12">
+      <main className="flex min-h-screen w-full items-center justify-center bg-zinc-50 px-6 py-12">
         <p className="text-sm text-zinc-600">Checking your session...</p>
       </main>
     );
@@ -257,68 +359,63 @@ export default function DashboardPage() {
 
   return (
     <>
-      <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-6 py-8">
-        <ProfileHeader username={username} isPublic={profileIsPublic} onLogout={handleLogout} />
+      <main className="relative min-h-screen bg-zinc-50">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[radial-gradient(60%_60%_at_50%_0%,rgba(16,185,129,0.12),rgba(16,185,129,0)_70%)]"
+        />
 
-        <section className="mt-2 border-y border-zinc-200 py-2">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => {
-                setActiveUtilityPanel((panel) => (panel === "search" ? "none" : "search"));
-              }}
-              className={`rounded-md px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition ${
-                activeUtilityPanel === "search"
-                  ? "bg-zinc-900 text-white"
-                  : "border border-zinc-300 text-zinc-700 hover:bg-zinc-50"
-              }`}
-            >
-              Search
-            </button>
+        <div className="relative mx-auto flex w-full max-w-7xl flex-col px-6 py-8">
+          <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <ProfileHeader username={username} isPublic={profileIsPublic} onLogout={handleLogout} />
 
-            <button
-              type="button"
-              onClick={() => {
-                setActiveUtilityPanel((panel) => (panel === "settings" ? "none" : "settings"));
-              }}
-              className={`rounded-md px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition ${
-                activeUtilityPanel === "settings"
-                  ? "bg-zinc-900 text-white"
-                  : "border border-zinc-300 text-zinc-700 hover:bg-zinc-50"
-              }`}
-            >
-              Profile
-            </button>
-          </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveUtilityPanel((panel) => (panel === "search" ? "none" : "search"));
+                  }}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition ${
+                    activeUtilityPanel === "search"
+                      ? "bg-emerald-600 text-white shadow-sm"
+                      : "border border-zinc-200 text-zinc-600 hover:border-zinc-300 hover:bg-zinc-50"
+                  }`}
+                >
+                  Search
+                </button>
 
-          {activeUtilityPanel === "search" ? (
-            <div className="mt-3">
-              <PublicProfileSearch currentUsername={username.toLowerCase()} />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveUtilityPanel("none");
+                    setIsSettingsOpen(true);
+                  }}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition ${
+                    isSettingsOpen
+                      ? "bg-emerald-600 text-white shadow-sm"
+                      : "border border-zinc-200 text-zinc-600 hover:border-zinc-300 hover:bg-zinc-50"
+                  }`}
+                >
+                  Settings
+                </button>
+              </div>
             </div>
-          ) : null}
 
-          {activeUtilityPanel === "settings" && user ? (
-            <div className="mt-3">
-              <ProfileSettings
-                userId={user.id}
-                initialUsername={profileUsername}
-                initialIsPublic={profileIsPublic}
-                compact
-                onUpdated={(next) => {
-                  setProfileUsername(next.username);
-                  setProfileIsPublic(next.isPublic);
-                  setActiveUtilityPanel("none");
-                }}
-              />
-            </div>
-          ) : null}
-        </section>
+            {activeUtilityPanel === "search" ? (
+              <div className="mt-4 border-t border-zinc-100 pt-4">
+                <PublicProfileSearch
+                  currentUsername={username.toLowerCase()}
+                  onDone={() => setActiveUtilityPanel("none")}
+                />
+              </div>
+            ) : null}
+          </section>
 
-        <div className="mt-6 grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_320px]">
-          <section>
+          <section className="mt-6 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-6">
             <div className="flex items-center justify-between gap-4">
               <TimeViewToggle mode={viewMode} onChange={setViewMode} />
-              <p className="text-xs text-zinc-500">Heatmap</p>
+              <StreakBadge currentStreak={streak.current} bestStreak={streak.best} />
             </div>
 
             <div className="transition-all duration-300">
@@ -342,32 +439,76 @@ export default function DashboardPage() {
               ) : null}
 
               {viewMode === "week" ? (
-                <HeatmapWeek cells={weekCells} onCellClick={(cell) => openDayDetailByDate(cell.dateKey)} />
+                <>
+                  <WeeklyPriorityCard
+                    weekLabel={currentWeekLabel}
+                    priority={currentWeekPriority}
+                    isSaving={isSavingPriority}
+                    onSave={handleSaveWeeklyPriority}
+                  />
+                  <HeatmapWeek cells={weekCells} onCellClick={(cell) => openDayDetailByDate(cell.dateKey)} />
+                </>
               ) : null}
             </div>
 
             <HeatmapLegend />
           </section>
 
-          <LogPanel
-            selectedDate={selectedDate}
-            score={score}
-            selectedEntry={selectedEntry}
-            isSaving={isSaving}
-            isLoadingEntries={isLoadingEntries}
-            feedback={feedback}
-            error={error}
-            onDateChange={handleDateChange}
-            onScoreChange={setScore}
-            initialNote={selectedEntry?.note ?? ""}
-            onSubmit={handleSaveEntry}
-            recentEntries={recent}
-            onOpenEntry={setActiveModalEntry}
-          />
+          <div className="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+            <LogPanel
+              selectedDate={selectedDate}
+              score={score}
+              selectedEntry={selectedEntry}
+              isSaving={isSaving}
+              isLoadingEntries={isLoadingEntries}
+              feedback={feedback}
+              error={error}
+              onDateChange={handleDateChange}
+              onScoreChange={setScore}
+              initialNote={selectedEntry?.note ?? ""}
+              weekPriority={selectedWeekPriority}
+              initialPriorityUpdate={selectedEntry?.priority_update ?? ""}
+              onSubmit={handleSaveEntry}
+            />
+
+            <aside className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+              <div className="max-h-[70vh] overflow-y-auto pr-1">
+                <RecentEntriesList entries={recent} onOpen={(entry) => setActiveModalDate(entry.entry_date)} />
+              </div>
+            </aside>
+          </div>
         </div>
       </main>
 
-      <DayDetailModal entry={activeModalEntry} onClose={() => setActiveModalEntry(null)} />
+      <SettingsModal
+        open={isSettingsOpen}
+        onClose={() => {
+          setIsSettingsOpen(false);
+        }}
+      >
+        {user ? (
+          <ProfileSettings
+            userId={user.id}
+            initialUsername={profileUsername}
+            initialIsPublic={profileIsPublic}
+            compact
+            onUpdated={(next) => {
+              setProfileUsername(next.username);
+              setProfileIsPublic(next.isPublic);
+              setIsSettingsOpen(false);
+            }}
+          />
+        ) : null}
+      </SettingsModal>
+
+      <DayDetailModal
+        entry={activeModalEntry}
+        onClose={() => setActiveModalDate(null)}
+        onPrev={handleModalPrev}
+        onNext={handleModalNext}
+        hasPrev={hasPrevModalEntry}
+        hasNext={hasNextModalEntry}
+      />
     </>
   );
 }

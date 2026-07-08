@@ -22,6 +22,12 @@ function addDays(date: Date, days: number): Date {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
 }
 
+// Returns the date key (YYYY-MM-DD) of the Sunday that starts the week
+// containing the given date key. Used to bucket entries/priorities by week.
+export function weekStartKey(dateKey: string): string {
+  return toDateKey(startOfWeek(fromDateKey(dateKey)));
+}
+
 export function formatDisplayDate(value: string | Date, options?: { withWeekday?: boolean }): string {
   const date = typeof value === "string" ? fromDateKey(value) : value;
   const day = date.getDate();
@@ -262,6 +268,37 @@ export function computeStats(entries: DailyEntry[], year: number): DashboardStat
     bestStreak,
     greenDays,
   };
+}
+
+export function getStreakStats(entries: DailyEntry[], today = new Date()): { current: number; best: number } {
+  const dateKeys = new Set(entries.map((entry) => entry.entry_date));
+  const todayKey = toDateKey(today);
+
+  let current = 0;
+  let cursor = dateKeys.has(todayKey) ? today : addDays(today, -1);
+  while (dateKeys.has(toDateKey(cursor))) {
+    current += 1;
+    cursor = addDays(cursor, -1);
+  }
+
+  const sortedDates = [...dateKeys].sort();
+  let best = 0;
+  let run = 0;
+  let previous: Date | null = null;
+
+  sortedDates.forEach((dateKey) => {
+    const date = fromDateKey(dateKey);
+    if (!previous) {
+      run = 1;
+    } else {
+      const diffDays = Math.round((date.getTime() - previous.getTime()) / DAY_MS);
+      run = diffDays === 1 ? run + 1 : 1;
+    }
+    best = Math.max(best, run);
+    previous = date;
+  });
+
+  return { current, best };
 }
 
 export function getBestAndWorst(entries: DailyEntry[]): { best: DailyEntry[]; worst: DailyEntry[] } {
