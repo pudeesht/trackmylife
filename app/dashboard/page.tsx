@@ -221,6 +221,9 @@ export default function DashboardPage() {
   const currentWeekKey = useMemo(() => weekStartKey(toDateKey(today)), [today]);
   const currentWeekPriority = priorityByWeek.get(currentWeekKey) ?? null;
   const selectedWeekPriority = priorityByWeek.get(weekStartKey(selectedDate)) ?? null;
+  const activeModalWeekPriority = activeModalEntry
+    ? priorityByWeek.get(weekStartKey(activeModalEntry.entry_date)) ?? null
+    : null;
   const currentWeekLabel = `Week of ${formatDisplayDate(currentWeekKey)}`;
 
   async function handleLogout() {
@@ -508,6 +511,7 @@ export default function DashboardPage() {
         onNext={handleModalNext}
         hasPrev={hasPrevModalEntry}
         hasNext={hasNextModalEntry}
+        weekPriority={activeModalWeekPriority}
       />
     </>
   );

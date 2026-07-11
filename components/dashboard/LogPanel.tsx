@@ -53,37 +53,39 @@ function LogPanelInner({
           </p>
         </div>
 
-        <label className="block text-xs font-medium uppercase tracking-wide text-zinc-500">
-          Date
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(event) => onDateChange(event.target.value)}
-            className="mt-1 w-full rounded-lg border border-zinc-300 px-2.5 py-2 text-sm outline-none ring-emerald-500 transition focus:ring-2"
-          />
-        </label>
+        <div className="grid gap-4 sm:grid-cols-[11rem_1fr] sm:items-start">
+          <label className="block text-xs font-medium uppercase tracking-wide text-zinc-500">
+            Date
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(event) => onDateChange(event.target.value)}
+              className="mt-1 w-full rounded-lg border border-zinc-300 px-2.5 py-2 text-sm outline-none ring-emerald-500 transition focus:ring-2"
+            />
+          </label>
 
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">Score</p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {Array.from({ length: 9 }, (_, i) => i + 1).map((value) => {
-              const isSelected = score === value;
-              return (
-                <button
-                  key={value}
-                  type="button"
-                  onClick={() => onScoreChange(value)}
-                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-sm font-semibold transition ${
-                    isSelected
-                      ? "ring-2 ring-emerald-600 ring-offset-2 scale-105"
-                      : "opacity-90 hover:opacity-100 hover:scale-105"
-                  }`}
-                  style={{ backgroundColor: getScoreColor(value), color: value <= 5 ? "#111827" : "#ffffff" }}
-                >
-                  {value}
-                </button>
-              );
-            })}
+          <div>
+            <p className="text-xs font-medium uppercase tracking-wide text-zinc-500">Score</p>
+            <div className="mt-1 flex gap-1.5">
+              {Array.from({ length: 10 }, (_, i) => i + 1).map((value) => {
+                const isSelected = score === value;
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => onScoreChange(value)}
+                    className={`flex h-10 flex-1 items-center justify-center rounded-lg text-sm font-semibold transition ${
+                      isSelected
+                        ? "z-10 ring-2 ring-emerald-600 ring-offset-1 scale-105"
+                        : "opacity-90 hover:opacity-100 hover:scale-105"
+                    }`}
+                    style={{ backgroundColor: getScoreColor(value), color: value <= 5 ? "#111827" : "#ffffff" }}
+                  >
+                    {value}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 

@@ -11,9 +11,10 @@ type DayDetailModalProps = {
   onNext: () => void;
   hasPrev: boolean;
   hasNext: boolean;
+  weekPriority?: string | null;
 };
 
-export function DayDetailModal({ entry, onClose, onPrev, onNext, hasPrev, hasNext }: DayDetailModalProps) {
+export function DayDetailModal({ entry, onClose, onPrev, onNext, hasPrev, hasNext, weekPriority }: DayDetailModalProps) {
   useEffect(() => {
     if (!entry) {
       return;
@@ -70,6 +71,21 @@ export function DayDetailModal({ entry, onClose, onPrev, onNext, hasPrev, hasNex
             {entry.note?.trim().length ? entry.note : "No note added for this day."}
           </p>
         </div>
+
+        {entry.priority_update?.trim().length ? (
+          <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50/60 p-3">
+            <p className="text-xs uppercase tracking-wide text-emerald-700">
+              {weekPriority ? (
+                <>
+                  Update on: <span className="normal-case font-medium text-emerald-800">{weekPriority}</span>
+                </>
+              ) : (
+                "Weekly priority update"
+              )}
+            </p>
+            <p className="mt-2 whitespace-pre-wrap text-sm text-zinc-800">{entry.priority_update}</p>
+          </div>
+        ) : null}
 
         <div className="mt-5 flex items-center justify-between border-t border-zinc-100 pt-4">
           <button
