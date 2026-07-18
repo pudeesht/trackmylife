@@ -6,6 +6,7 @@ import { DayDetailModal } from "@/components/dashboard/DayDetailModal";
 import { HeatmapLegend } from "@/components/dashboard/HeatmapLegend";
 import { HeatmapYear } from "@/components/dashboard/HeatmapYear";
 import { StatsGrid } from "@/components/dashboard/StatsGrid";
+import { TrendsCard } from "@/components/dashboard/TrendsCard";
 import {
   buildYearMonthBlocks,
   formatDisplayDate,
@@ -264,6 +265,8 @@ export default function PublicProfilePage({ params }: ProfilePageProps) {
 
           <HeatmapLegend />
         </section>
+
+        <TrendsCard entries={entries} today={today} />
 
         <hr className="mt-8 border-zinc-200 dark:border-zinc-800" />
 

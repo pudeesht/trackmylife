@@ -60,7 +60,7 @@ export async function GET(
 
   const { data: entriesData, error: entriesError } = await serverSupabase
     .from("daily_entries")
-    .select("id, user_id, entry_date, score, note, created_at, updated_at")
+    .select("id, user_id, entry_date, score, note, priority_update, bedtime, instagram_minutes, created_at, updated_at")
     .eq("user_id", profile.user_id)
     .order("entry_date", { ascending: false })
     .limit(500);
