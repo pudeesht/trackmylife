@@ -32,12 +32,12 @@ export function WeeklyPriorityCard({ weekLabel, priority, isSaving, onSave }: We
   const showForm = isEmpty || isEditing;
 
   return (
-    <section className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4">
+    <section className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50/60 p-4 dark:border-emerald-900 dark:bg-emerald-950/40">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
           This week&apos;s focus
         </p>
-        <span className="text-[11px] text-emerald-600/70">{weekLabel}</span>
+        <span className="text-[11px] text-emerald-600/70 dark:text-emerald-400/70">{weekLabel}</span>
       </div>
 
       {showForm ? (
@@ -49,7 +49,7 @@ export function WeeklyPriorityCard({ weekLabel, priority, isSaving, onSave }: We
             maxLength={120}
             autoFocus={isEditing}
             placeholder="e.g. Finish the auth flow"
-            className="w-full rounded-lg border border-emerald-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none ring-emerald-500 transition focus:ring-2"
+            className="w-full rounded-lg border border-emerald-200 bg-white px-3 py-2 text-sm text-zinc-900 outline-none ring-emerald-500 transition focus:ring-2 dark:border-emerald-900 dark:bg-zinc-800 dark:text-zinc-100"
           />
           <button
             type="submit"
@@ -65,7 +65,7 @@ export function WeeklyPriorityCard({ weekLabel, priority, isSaving, onSave }: We
                 setDraft(priority ?? "");
                 setIsEditing(false);
               }}
-              className="shrink-0 rounded-lg px-2 py-2 text-xs font-medium text-emerald-700 transition hover:bg-emerald-100"
+              className="shrink-0 rounded-lg px-2 py-2 text-xs font-medium text-emerald-700 transition hover:bg-emerald-100 dark:text-emerald-400 dark:hover:bg-emerald-900/40"
             >
               Cancel
             </button>
@@ -73,14 +73,14 @@ export function WeeklyPriorityCard({ weekLabel, priority, isSaving, onSave }: We
         </form>
       ) : (
         <div className="mt-1 flex items-start justify-between gap-3">
-          <p className="text-sm font-medium text-zinc-900">
+          <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
             <span aria-hidden>🎯 </span>
             {priority}
           </p>
           <button
             type="button"
             onClick={() => setIsEditing(true)}
-            className="shrink-0 rounded-lg px-2 py-1 text-xs font-medium text-emerald-700 transition hover:bg-emerald-100"
+            className="shrink-0 rounded-lg px-2 py-1 text-xs font-medium text-emerald-700 transition hover:bg-emerald-100 dark:text-emerald-400 dark:hover:bg-emerald-900/40"
           >
             Edit
           </button>

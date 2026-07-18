@@ -133,24 +133,24 @@ export function PublicProfileSearch({ currentUsername, onDone }: PublicProfileSe
             window.setTimeout(() => setIsOpen(false), 120);
           }}
           placeholder="Search username"
-          className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-900 outline-none ring-emerald-500 transition focus:ring-2"
+          className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-1.5 text-sm text-zinc-900 outline-none ring-emerald-500 transition focus:ring-2 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
           aria-label="Search username"
         />
         <button
           type="submit"
           disabled={Boolean(!normalizedQuery)}
-          className="rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
+          className="rounded-lg border border-zinc-300 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
         >
           Go
         </button>
       </form>
 
       {isOpen && normalizedQuery ? (
-        <div className="absolute left-0 right-0 top-full z-20 mt-1 rounded-xl border border-zinc-200 bg-white p-1 shadow-lg">
-          {isSearching ? <p className="px-2 py-1.5 text-xs text-zinc-500">Searching...</p> : null}
+        <div className="absolute left-0 right-0 top-full z-20 mt-1 rounded-xl border border-zinc-200 bg-white p-1 shadow-lg dark:border-zinc-800 dark:bg-zinc-900">
+          {isSearching ? <p className="px-2 py-1.5 text-xs text-zinc-500 dark:text-zinc-400">Searching...</p> : null}
 
           {!isSearching && matches.length === 0 ? (
-            <p className="px-2 py-1.5 text-xs text-zinc-500">No matches</p>
+            <p className="px-2 py-1.5 text-xs text-zinc-500 dark:text-zinc-400">No matches</p>
           ) : null}
 
           {!isSearching ? (
@@ -165,7 +165,7 @@ export function PublicProfileSearch({ currentUsername, onDone }: PublicProfileSe
                   onClick={() => {
                     navigateTo(match.username);
                   }}
-                  className="rounded-lg px-2 py-2 text-left text-sm text-zinc-800 transition hover:bg-zinc-50"
+                  className="rounded-lg px-2 py-2 text-left text-sm text-zinc-800 transition hover:bg-zinc-50 dark:text-zinc-200 dark:hover:bg-zinc-800"
                 >
                   {match.username}
                 </button>
@@ -175,7 +175,7 @@ export function PublicProfileSearch({ currentUsername, onDone }: PublicProfileSe
         </div>
       ) : null}
 
-      {error ? <p className="mt-1 text-xs text-red-600">{error}</p> : null}
+      {error ? <p className="mt-1 text-xs text-red-600 dark:text-red-400">{error}</p> : null}
     </div>
   );
 }

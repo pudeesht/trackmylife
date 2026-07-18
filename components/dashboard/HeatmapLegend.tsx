@@ -14,13 +14,13 @@ export function HeatmapLegend() {
 
   return (
     <section className="mt-3 flex items-center gap-2">
-      <span className="text-xs text-zinc-500">1</span>
+      <span className="text-xs text-zinc-500 dark:text-zinc-400">1</span>
       <div className="flex items-center gap-0.5">
         {colors.map((item) => (
           <span key={item.score} className="h-3 w-2 rounded-[1px]" style={{ backgroundColor: item.hex }} />
         ))}
       </div>
-      <span className="text-xs text-zinc-500">10</span>
+      <span className="text-xs text-zinc-500 dark:text-zinc-400">10</span>
     </section>
   );
 }

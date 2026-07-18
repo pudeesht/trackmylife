@@ -84,13 +84,13 @@ export function ProfileSettings({
   }
 
   return (
-    <section className={`${compact ? "" : "mt-4 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm"}`}>
+    <section className={`${compact ? "" : "mt-4 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"}`}>
       {compact ? null : (
-        <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700">Profile settings</p>
+        <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">Profile settings</p>
       )}
       <form onSubmit={handleSubmit} className={`grid gap-3 sm:grid-cols-[1fr_auto] sm:items-end ${compact ? "" : "mt-3"}`}>
         <label className="block">
-          <span className="text-xs font-medium text-zinc-600">Username</span>
+          <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">Username</span>
           <input
             type="text"
             value={username}
@@ -101,14 +101,14 @@ export function ProfileSettings({
             }}
             autoComplete="off"
             spellCheck={false}
-            className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none ring-emerald-500 transition focus:ring-2"
+            className="mt-1 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-sm text-zinc-900 outline-none ring-emerald-500 transition focus:ring-2 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
             placeholder="your_username"
           />
-          <p className="mt-1 text-[11px] text-zinc-500">{usernameHint}</p>
+          <p className="mt-1 text-[11px] text-zinc-500 dark:text-zinc-400">{usernameHint}</p>
         </label>
 
-        <div className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 px-3 py-2 sm:justify-end">
-          <label className="inline-flex items-center gap-2 text-sm text-zinc-700">
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-zinc-200 px-3 py-2 sm:justify-end dark:border-zinc-700">
+          <label className="inline-flex items-center gap-2 text-sm text-zinc-700 dark:text-zinc-300">
             <input
               type="checkbox"
               checked={isPublic}
@@ -116,22 +116,22 @@ export function ProfileSettings({
                 setIsPublic(event.target.checked);
                 if (feedback) setFeedback(null);
               }}
-              className="h-4 w-4 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500"
+              className="h-4 w-4 rounded border-zinc-300 text-emerald-600 focus:ring-emerald-500 dark:border-zinc-600 dark:bg-zinc-800"
             />
             Public profile
           </label>
           <button
             type="submit"
             disabled={isSaving}
-            className="rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-zinc-700 disabled:opacity-60"
+            className="rounded-lg bg-zinc-900 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-white transition hover:bg-zinc-700 disabled:opacity-60 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
           >
             {isSaving ? "Saving..." : "Save"}
           </button>
         </div>
       </form>
 
-      {error ? <p className="mt-2 text-xs font-medium text-red-600">{error}</p> : null}
-      {feedback ? <p className="mt-2 text-xs font-medium text-emerald-700">{feedback}</p> : null}
+      {error ? <p className="mt-2 text-xs font-medium text-red-600 dark:text-red-400">{error}</p> : null}
+      {feedback ? <p className="mt-2 text-xs font-medium text-emerald-700 dark:text-emerald-400">{feedback}</p> : null}
     </section>
   );
 }

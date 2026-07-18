@@ -14,7 +14,7 @@ export function HeatmapYear({ monthBlocks, onMonthClick, onCellClick, readOnly =
     <section className="mt-4">
       {showTitle ? (
         <div className="mb-3">
-          <h2 className="text-base font-semibold text-zinc-900">Year View</h2>
+          <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">Year View</h2>
         </div>
       ) : null}
 
@@ -29,8 +29,8 @@ export function HeatmapYear({ monthBlocks, onMonthClick, onCellClick, readOnly =
                     onMonthClick(month.monthIndex);
                   }
                 }}
-                className={`mb-2 block text-[11px] font-medium text-zinc-500 transition ${
-                  readOnly ? "cursor-default" : "hover:text-zinc-900"
+                className={`mb-2 block text-[11px] font-medium text-zinc-500 transition dark:text-zinc-400 ${
+                  readOnly ? "cursor-default" : "hover:text-zinc-900 dark:hover:text-zinc-100"
                 }`}
               >
                 {month.label}

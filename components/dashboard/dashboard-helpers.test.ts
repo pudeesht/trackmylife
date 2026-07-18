@@ -7,6 +7,10 @@ import {
   getCellTooltip,
   getScoreColor,
   weekStartKey,
+  bedtimeToLatenessMinutes,
+  latenessToClockLabel,
+  formatBedtime,
+  formatMinutesShort,
 } from "./dashboard-helpers";
 import type { DailyEntry, DayCell } from "./dashboard-types";
 
@@ -17,6 +21,8 @@ const makeEntry = (entry_date: string, score: number, note: string | null = null
   score,
   note,
   priority_update: null,
+  bedtime: null,
+  instagram_minutes: null,
   created_at: `${entry_date}T00:00:00Z`,
   updated_at: `${entry_date}T00:00:00Z`,
 });
@@ -150,6 +156,46 @@ describe("getScoreColor", () => {
   it("clamps scores outside the 1-10 range", () => {
     expect(getScoreColor(0)).toBe("#7f0000");
     expect(getScoreColor(11)).toBe("#0d4d3d");
+  });
+});
+
+describe("bedtimeToLatenessMinutes", () => {
+  it("anchors at 6pm so later bedtimes are always larger, across midnight", () => {
+    // 6:00 PM is the anchor -> 0.
+    expect(bedtimeToLatenessMinutes("18:00")).toBe(0);
+    // 11:30 PM -> 5.5h after 6pm = 330 min.
+    expect(bedtimeToLatenessMinutes("23:30")).toBe(330);
+    // Midnight -> 6h after 6pm = 360; 2:15 AM -> 8h15m = 495. Later = larger, no wrap glitch.
+    expect(bedtimeToLatenessMinutes("00:00")).toBe(360);
+    expect(bedtimeToLatenessMinutes("02:15")).toBe(495);
+    expect(bedtimeToLatenessMinutes("02:15:00")).toBe(495);
+  });
+
+  it("returns null for empty/unparseable input", () => {
+    expect(bedtimeToLatenessMinutes(null)).toBeNull();
+    expect(bedtimeToLatenessMinutes("")).toBeNull();
+    expect(bedtimeToLatenessMinutes("not-a-time")).toBeNull();
+  });
+});
+
+describe("bedtime + minute formatting", () => {
+  it("round-trips lateness back to a clock label", () => {
+    expect(latenessToClockLabel(495)).toBe("2:15 AM");
+    expect(latenessToClockLabel(0)).toBe("6:00 PM");
+    expect(latenessToClockLabel(330)).toBe("11:30 PM");
+  });
+
+  it("formats stored bedtimes for display", () => {
+    expect(formatBedtime("02:15:00")).toBe("2:15 AM");
+    expect(formatBedtime("23:30")).toBe("11:30 PM");
+    expect(formatBedtime("00:00")).toBe("12:00 AM");
+    expect(formatBedtime(null)).toBe("");
+  });
+
+  it("formats Instagram minutes compactly", () => {
+    expect(formatMinutesShort(45)).toBe("45m");
+    expect(formatMinutesShort(60)).toBe("1h");
+    expect(formatMinutesShort(90)).toBe("1h 30m");
   });
 });
 

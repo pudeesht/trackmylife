@@ -10,7 +10,7 @@ type HeatmapWeekProps = {
 export function HeatmapWeek({ cells, onCellClick, readOnly = false }: HeatmapWeekProps) {
   return (
     <section className="mt-4 transition-all duration-300">
-      <h2 className="text-base font-semibold text-zinc-900">Week View</h2>
+      <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-100">Week View</h2>
 
       <div className="mt-4 grid grid-cols-7 gap-3">
         {cells.map((cell) => {
@@ -28,7 +28,7 @@ export function HeatmapWeek({ cells, onCellClick, readOnly = false }: HeatmapWee
                 cell.isToday ? "border border-sky-700" : "border border-transparent"
               } flex h-14 w-14 items-center justify-center rounded-lg font-mono text-sm font-semibold transition ${
                 canOpen ? `cursor-pointer ${readOnly ? "" : "hover:scale-[1.03]"}` : "cursor-default"
-              } ${cell.entry ? "text-white" : "text-zinc-600"}`}
+              } ${cell.entry ? "text-white" : "text-zinc-600 dark:text-zinc-200"}`}
               style={{
                 ...style,
                 borderWidth: cell.isToday ? "1.5px" : "1px",

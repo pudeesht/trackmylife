@@ -71,21 +71,23 @@ export default function AuthPage() {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-md flex-col justify-center px-6 py-12">
       <div className="mb-8">
-        <p className="text-sm font-semibold uppercase tracking-wide text-emerald-700">
+        <p className="text-sm font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
           TrackMyLife
         </p>
-        <h1 className="mt-2 text-3xl font-semibold text-zinc-900">Welcome back</h1>
-        <p className="mt-2 text-sm text-zinc-600">
+        <h1 className="mt-2 text-3xl font-semibold text-zinc-900 dark:text-zinc-100">Welcome back</h1>
+        <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
           Log your daily score from 1 to 10 and build your life heatmap.
         </p>
       </div>
 
-      <div className="mb-4 grid grid-cols-2 rounded-xl bg-zinc-100 p-1 text-sm">
+      <div className="mb-4 grid grid-cols-2 rounded-xl bg-zinc-100 p-1 text-sm dark:bg-zinc-800">
         <button
           type="button"
           onClick={() => setMode("login")}
           className={`rounded-lg px-3 py-2 font-medium transition ${
-            mode === "login" ? "bg-white text-zinc-900 shadow" : "text-zinc-600"
+            mode === "login"
+              ? "bg-white text-zinc-900 shadow dark:bg-zinc-700 dark:text-zinc-100"
+              : "text-zinc-600 dark:text-zinc-400"
           }`}
         >
           Log in
@@ -94,16 +96,18 @@ export default function AuthPage() {
           type="button"
           onClick={() => setMode("signup")}
           className={`rounded-lg px-3 py-2 font-medium transition ${
-            mode === "signup" ? "bg-white text-zinc-900 shadow" : "text-zinc-600"
+            mode === "signup"
+              ? "bg-white text-zinc-900 shadow dark:bg-zinc-700 dark:text-zinc-100"
+              : "text-zinc-600 dark:text-zinc-400"
           }`}
         >
           Sign up
         </button>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-5">
+      <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-900">
         <div className="space-y-1">
-          <label htmlFor="email" className="text-sm font-medium text-zinc-700">
+          <label htmlFor="email" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
             Email
           </label>
           <input
@@ -111,7 +115,7 @@ export default function AuthPage() {
             type="email"
             value={email}
             onChange={(event) => setEmail(event.target.value)}
-            className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm outline-none ring-emerald-500 transition focus:ring"
+            className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm outline-none ring-emerald-500 transition focus:ring dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder:text-zinc-500"
             placeholder="you@example.com"
             autoComplete="email"
             required
@@ -119,7 +123,7 @@ export default function AuthPage() {
         </div>
 
         <div className="space-y-1">
-          <label htmlFor="password" className="text-sm font-medium text-zinc-700">
+          <label htmlFor="password" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
             Password
           </label>
           <input
@@ -127,7 +131,7 @@ export default function AuthPage() {
             type="password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
-            className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm outline-none ring-emerald-500 transition focus:ring"
+            className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm outline-none ring-emerald-500 transition focus:ring dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder:text-zinc-500"
             placeholder="Enter your password"
             autoComplete={mode === "login" ? "current-password" : "new-password"}
             minLength={6}
@@ -135,23 +139,23 @@ export default function AuthPage() {
           />
         </div>
 
-        {error ? <p className="text-sm text-red-600">{error}</p> : null}
-        {message ? <p className="text-sm text-emerald-700">{message}</p> : null}
+        {error ? <p className="text-sm text-red-600 dark:text-red-400">{error}</p> : null}
+        {message ? <p className="text-sm text-emerald-700 dark:text-emerald-400">{message}</p> : null}
 
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-70"
+          className="w-full rounded-lg bg-zinc-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-zinc-700 disabled:cursor-not-allowed disabled:opacity-70 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
         >
           {buttonText}
         </button>
       </form>
 
-      <p className="mt-4 text-sm text-zinc-600">
+      <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-400">
         New here? Choose <span className="font-medium">Sign up</span>. Already have an account? Use <span className="font-medium">Log in</span>.
       </p>
 
-      <Link href="/" className="mt-6 text-sm text-zinc-700 underline underline-offset-4">
+      <Link href="/" className="mt-6 text-sm text-zinc-700 underline underline-offset-4 dark:text-zinc-300">
         Back to landing page
       </Link>
     </main>

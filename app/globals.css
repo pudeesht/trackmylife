@@ -1,9 +1,18 @@
 @import "tailwindcss";
 
+/* Toggle dark mode with a `.dark` class on <html> instead of the OS preference. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #ffffff;
   --foreground: #171717;
   --muted: #94a3b8;
+}
+
+.dark {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+  --muted: #71717a;
 }
 
 @theme inline {

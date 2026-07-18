@@ -316,3 +316,58 @@ export function getBestAndWorst(entries: DailyEntry[]): { best: DailyEntry[]; wo
 export function getRecentEntries(entries: DailyEntry[]): DailyEntry[] {
   return [...entries].sort((a, b) => b.entry_date.localeCompare(a.entry_date)).slice(0, 5);
 }
+
+// ---- Optional daily metrics: bedtime + Instagram screen time ----
+
+// Anchor the "lateness" scale at 6:00 PM so that a later bedtime is always a
+// larger number, even across the midnight boundary (11pm < 1am < 3am).
+const BEDTIME_ANCHOR_MIN = 18 * 60;
+
+function formatClockFromMinutes(totalMinutes: number): string {
+  const mins = ((Math.round(totalMinutes) % 1440) + 1440) % 1440;
+  const h24 = Math.floor(mins / 60);
+  const m = mins % 60;
+  const period = h24 < 12 ? "AM" : "PM";
+  const h12 = h24 % 12 === 0 ? 12 : h24 % 12;
+  return `${h12}:${String(m).padStart(2, "0")} ${period}`;
+}
+
+// Parses a stored bedtime ("HH:MM" or "HH:MM:SS") into minutes-after-6pm,
+// so charts read "later = higher" without a midnight discontinuity. Null if unparseable.
+export function bedtimeToLatenessMinutes(bedtime: string | null): number | null {
+  if (!bedtime) {
+    return null;
+  }
+  const [h, m] = bedtime.split(":").map(Number);
+  if (Number.isNaN(h) || Number.isNaN(m)) {
+    return null;
+  }
+  return (h * 60 + m - BEDTIME_ANCHOR_MIN + 1440) % 1440;
+}
+
+// Human-friendly bedtime, e.g. "02:15:00" -> "2:15 AM".
+export function formatBedtime(bedtime: string | null): string {
+  if (!bedtime) {
+    return "";
+  }
+  const [h, m] = bedtime.split(":").map(Number);
+  if (Number.isNaN(h) || Number.isNaN(m)) {
+    return "";
+  }
+  return formatClockFromMinutes(h * 60 + m);
+}
+
+// Converts a lateness value (minutes-after-6pm) back into a clock label for axis ticks.
+export function latenessToClockLabel(lateness: number): string {
+  return formatClockFromMinutes(lateness + BEDTIME_ANCHOR_MIN);
+}
+
+// Compact minutes label for Instagram time, e.g. 90 -> "1h 30m", 45 -> "45m".
+export function formatMinutesShort(mins: number): string {
+  if (mins < 60) {
+    return `${mins}m`;
+  }
+  const h = Math.floor(mins / 60);
+  const m = mins % 60;
+  return m ? `${h}h ${m}m` : `${h}h`;
+}

@@ -164,7 +164,7 @@ export default function PublicProfilePage({ params }: ProfilePageProps) {
   if (isLoading) {
     return (
       <main className="mx-auto flex min-h-screen w-full max-w-4xl items-center justify-center px-6 py-12">
-        <p className="text-sm text-zinc-600">Loading Daymap...</p>
+        <p className="text-sm text-zinc-600 dark:text-zinc-400">Loading Daymap...</p>
       </main>
     );
   }
@@ -172,8 +172,8 @@ export default function PublicProfilePage({ params }: ProfilePageProps) {
   if (hasError) {
     return (
       <main className="mx-auto flex min-h-screen w-full max-w-4xl flex-col items-center justify-center px-6 py-12 text-center">
-        <h1 className="text-lg font-semibold text-zinc-900">Could not load this profile</h1>
-        <p className="mt-2 text-sm text-zinc-600">Please try again in a moment.</p>
+        <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">Could not load this profile</h1>
+        <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">Please try again in a moment.</p>
       </main>
     );
   }
@@ -181,7 +181,7 @@ export default function PublicProfilePage({ params }: ProfilePageProps) {
   if (!profile) {
     return (
       <main className="mx-auto flex min-h-screen w-full max-w-4xl flex-col items-center justify-center px-6 py-12 text-center">
-        <h1 className="text-lg font-semibold text-zinc-900">No Daymap found for this username</h1>
+        <h1 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">No Daymap found for this username</h1>
       </main>
     );
   }
@@ -193,25 +193,25 @@ export default function PublicProfilePage({ params }: ProfilePageProps) {
       <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-6 py-8">
         <header className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-zinc-900 text-sm font-bold text-white">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-zinc-900 text-sm font-bold text-white dark:bg-zinc-100 dark:text-zinc-900">
               {initials}
             </div>
             <div>
-              <h1 className="text-3xl font-semibold tracking-tight text-zinc-900">{displayName}</h1>
-              <p className="mt-1 text-sm text-zinc-500">Daymap · {currentYear} · Private profile</p>
+              <h1 className="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{displayName}</h1>
+              <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">Daymap · {currentYear} · Private profile</p>
             </div>
           </div>
 
           <Link
             href="/dashboard"
-            className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50"
+            className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
           >
             ← Dashboard
           </Link>
         </header>
 
         <section className="mt-10">
-          <p className="text-sm text-zinc-600">This profile is private</p>
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">This profile is private</p>
         </section>
       </main>
     );
@@ -222,38 +222,38 @@ export default function PublicProfilePage({ params }: ProfilePageProps) {
       <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-6 py-8">
         <header className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-zinc-900 text-sm font-bold text-white">
+            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-zinc-900 text-sm font-bold text-white dark:bg-zinc-100 dark:text-zinc-900">
               {initials}
             </div>
             <div>
-              <h1 className="text-3xl font-semibold tracking-tight text-zinc-900">{displayName}</h1>
-              <p className="mt-1 text-sm text-zinc-500">Daymap · {currentYear} · Public profile</p>
+              <h1 className="text-3xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">{displayName}</h1>
+              <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">Daymap · {currentYear} · Public profile</p>
             </div>
           </div>
 
           <div className="flex items-center gap-2">
             <Link
               href="/dashboard"
-              className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50"
+              className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
             >
               ← Dashboard
             </Link>
             <button
               type="button"
               onClick={handleCopyLink}
-              className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50"
+              className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
             >
               Copy link
             </button>
           </div>
         </header>
 
-        {copyFeedback ? <p className="mt-2 text-right text-xs text-zinc-500">{copyFeedback}</p> : null}
+        {copyFeedback ? <p className="mt-2 text-right text-xs text-zinc-500 dark:text-zinc-400">{copyFeedback}</p> : null}
 
         {stats ? <StatsGrid stats={stats} /> : null}
 
         <section className="mt-6">
-          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">{currentYear} heatmap</p>
+          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{currentYear} heatmap</p>
           <HeatmapYear
             monthBlocks={yearMonthBlocks}
             onMonthClick={() => {}}
@@ -265,48 +265,48 @@ export default function PublicProfilePage({ params }: ProfilePageProps) {
           <HeatmapLegend />
         </section>
 
-        <hr className="mt-8 border-zinc-200" />
+        <hr className="mt-8 border-zinc-200 dark:border-zinc-800" />
 
         <section className="mt-6 grid gap-6 lg:grid-cols-2">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Best days</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Best days</p>
             <div className="mt-3 space-y-3">
               {bestAndWorst.best.map((entry) => (
                 <button
                   key={`best-${entry.id}`}
                   type="button"
                   onClick={() => setActiveModalDate(entry.entry_date)}
-                  className="w-full rounded-md border border-zinc-200 p-3 text-left transition hover:bg-zinc-50"
+                  className="w-full rounded-md border border-zinc-200 p-3 text-left transition hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-800"
                 >
                   <div className="flex items-center justify-between gap-4">
-                    <p className="text-sm text-zinc-600">{formatDisplayDate(entry.entry_date)}</p>
+                    <p className="text-sm text-zinc-600 dark:text-zinc-400">{formatDisplayDate(entry.entry_date)}</p>
                     <span className="text-sm font-semibold" style={{ color: getScoreColor(entry.score) }}>
                       {entry.score}/10
                     </span>
                   </div>
-                  <p className="mt-1 text-sm text-zinc-900">{getNotePreview(entry.note)}</p>
+                  <p className="mt-1 text-sm text-zinc-900 dark:text-zinc-100">{getNotePreview(entry.note)}</p>
                 </button>
               ))}
             </div>
           </div>
 
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">Worst days</p>
+            <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Worst days</p>
             <div className="mt-3 space-y-3">
               {bestAndWorst.worst.map((entry) => (
                 <button
                   key={`worst-${entry.id}`}
                   type="button"
                   onClick={() => setActiveModalDate(entry.entry_date)}
-                  className="w-full rounded-md border border-zinc-200 p-3 text-left transition hover:bg-zinc-50"
+                  className="w-full rounded-md border border-zinc-200 p-3 text-left transition hover:bg-zinc-50 dark:border-zinc-800 dark:hover:bg-zinc-800"
                 >
                   <div className="flex items-center justify-between gap-4">
-                    <p className="text-sm text-zinc-600">{formatDisplayDate(entry.entry_date)}</p>
+                    <p className="text-sm text-zinc-600 dark:text-zinc-400">{formatDisplayDate(entry.entry_date)}</p>
                     <span className="text-sm font-semibold" style={{ color: getScoreColor(entry.score) }}>
                       {entry.score}/10
                     </span>
                   </div>
-                  <p className="mt-1 text-sm text-zinc-900">{getNotePreview(entry.note)}</p>
+                  <p className="mt-1 text-sm text-zinc-900 dark:text-zinc-100">{getNotePreview(entry.note)}</p>
                 </button>
               ))}
             </div>
@@ -314,8 +314,8 @@ export default function PublicProfilePage({ params }: ProfilePageProps) {
         </section>
 
         <section className="mt-8">
-          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500">All entries</p>
-          <div className="mt-3 divide-y divide-zinc-200 rounded-md border border-zinc-200">
+          <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">All entries</p>
+          <div className="mt-3 divide-y divide-zinc-200 rounded-md border border-zinc-200 dark:divide-zinc-800 dark:border-zinc-800">
             {sortedEntries.map((entry) => (
               <article key={`entry-${entry.id}`} className="flex items-start justify-between gap-4 p-4">
                 <div className="flex min-w-0 items-start gap-3">
@@ -324,8 +324,8 @@ export default function PublicProfilePage({ params }: ProfilePageProps) {
                     style={{ backgroundColor: getScoreColor(entry.score) }}
                   />
                   <div className="min-w-0">
-                    <p className="text-sm text-zinc-600">{formatDisplayDate(entry.entry_date)}</p>
-                    <p className="mt-1 whitespace-pre-wrap text-sm text-zinc-900">
+                    <p className="text-sm text-zinc-600 dark:text-zinc-400">{formatDisplayDate(entry.entry_date)}</p>
+                    <p className="mt-1 whitespace-pre-wrap text-sm text-zinc-900 dark:text-zinc-100">
                       {entry.note?.trim().length ? entry.note : "No note"}
                     </p>
                   </div>

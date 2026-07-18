@@ -5,6 +5,8 @@ export type DailyEntry = {
   score: number;
   note: string | null;
   priority_update: string | null;
+  bedtime: string | null;
+  instagram_minutes: number | null;
   created_at: string;
   updated_at: string;
 };
