@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { checkRateLimit } from "@/lib/ratelimit";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -16,6 +17,11 @@ export async function GET(request: Request) {
     return Response.json({ message: "Server search API is not configured" }, { status: 500 });
   }
 
+  const { ok } = await checkRateLimit(request, "search");
+  if (!ok) {
+    return Response.json({ message: "Too many requests. Please slow down." }, { status: 429 });
+  }
+
   const { searchParams } = new URL(request.url);
   const raw = searchParams.get("query") ?? searchParams.get("q") ?? "";
   const query = normalizeUsernameQuery(raw);
@@ -31,6 +37,7 @@ export async function GET(request: Request) {
   const { data, error } = await serverSupabase
     .from("profiles")
     .select("username")
+    .eq("is_public", true)
     .like("username", `${query}%`)
     .order("username", { ascending: true })
     .limit(12)

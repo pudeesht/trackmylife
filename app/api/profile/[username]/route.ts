@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { checkRateLimit } from "@/lib/ratelimit";
 import { computeStats, getRecentEntries } from "@/components/dashboard/dashboard-helpers";
 import type { DailyEntry } from "@/components/dashboard/dashboard-types";
 
@@ -12,11 +13,16 @@ type ProfileRow = {
 };
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ username: string }> }
 ) {
   if (!supabaseUrl || !serviceRoleKey) {
     return Response.json({ message: "Server profile API is not configured" }, { status: 500 });
+  }
+
+  const { ok } = await checkRateLimit(request, "profile");
+  if (!ok) {
+    return Response.json({ message: "Too many requests. Please slow down." }, { status: 429 });
   }
 
   const serverSupabase = createClient(supabaseUrl, serviceRoleKey, {
