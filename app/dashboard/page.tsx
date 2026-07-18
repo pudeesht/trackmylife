@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import type { User } from "@supabase/supabase-js";
 import { supabase } from "@/lib/supabase/client";
 import { DayDetailModal } from "@/components/dashboard/DayDetailModal";
@@ -392,6 +393,13 @@ export default function DashboardPage() {
                 >
                   Search
                 </button>
+
+                <Link
+                  href="/explore"
+                  className="rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-semibold uppercase tracking-wide text-zinc-600 transition hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:bg-zinc-800"
+                >
+                  Explore
+                </Link>
 
                 <button
                   type="button"

@@ -81,12 +81,20 @@ export default function Home() {
 
       <header className="relative mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-6">
         <span className="text-sm font-bold tracking-wide text-zinc-900 dark:text-zinc-100">TrackMyLife</span>
-        <Link
-          href="/auth"
-          className="text-sm font-medium text-zinc-600 transition hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
-        >
-          Sign in
-        </Link>
+        <nav className="flex items-center gap-5">
+          <Link
+            href="/explore"
+            className="text-sm font-medium text-zinc-600 transition hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+          >
+            Explore
+          </Link>
+          <Link
+            href="/auth"
+            className="text-sm font-medium text-zinc-600 transition hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+          >
+            Sign in
+          </Link>
+        </nav>
       </header>
 
       <section className="relative mx-auto grid w-full max-w-6xl gap-12 px-6 pb-24 pt-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-center lg:pt-16">
@@ -109,10 +117,10 @@ export default function Home() {
               {isLoading ? "Checking session..." : session ? "Open dashboard" : "Get started"}
             </Link>
             <Link
-              href="/auth"
+              href="/explore"
               className="rounded-lg border border-zinc-300 bg-white px-6 py-3 text-center text-sm font-semibold text-zinc-700 transition hover:border-zinc-400 hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:border-zinc-600 dark:hover:bg-zinc-800"
             >
-              Sign in / Sign up
+              Explore public Daymaps
             </Link>
           </div>
         </div>
