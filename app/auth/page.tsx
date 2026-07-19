@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase/client";
 
-type AuthMode = "login" | "signup";
+type AuthMode = "login" | "signup" | "forgot";
 
 export default function AuthPage() {
   const router = useRouter();
@@ -18,10 +18,20 @@ export default function AuthPage() {
 
   const buttonText = useMemo(() => {
     if (loading) {
-      return mode === "login" ? "Logging in..." : "Creating account...";
+      if (mode === "login") return "Logging in...";
+      if (mode === "signup") return "Creating account...";
+      return "Sending link...";
     }
-    return mode === "login" ? "Log in" : "Create account";
+    if (mode === "login") return "Log in";
+    if (mode === "signup") return "Create account";
+    return "Send reset link";
   }, [loading, mode]);
+
+  function switchMode(nextMode: AuthMode) {
+    setMode(nextMode);
+    setError(null);
+    setMessage(null);
+  }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -30,6 +40,29 @@ export default function AuthPage() {
     setError(null);
 
     const normalizedEmail = email.trim().toLowerCase();
+
+    if (mode === "forgot") {
+      if (!normalizedEmail) {
+        setError("Enter your email address.");
+        setLoading(false);
+        return;
+      }
+
+      const { error: resetError } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
+        redirectTo: `${window.location.origin}/auth/reset`,
+      });
+
+      if (resetError) {
+        setError(resetError.message);
+      } else {
+        // Deliberately the same message whether or not the account exists, so
+        // this form can't be used to discover which emails are registered.
+        setMessage("If an account exists for that email, a reset link is on its way. Check your inbox.");
+      }
+
+      setLoading(false);
+      return;
+    }
 
     if (!normalizedEmail || !password) {
       setError("Email and password are required.");
@@ -83,9 +116,9 @@ export default function AuthPage() {
       <div className="mb-4 grid grid-cols-2 rounded-xl bg-zinc-100 p-1 text-sm dark:bg-zinc-800">
         <button
           type="button"
-          onClick={() => setMode("login")}
+          onClick={() => switchMode("login")}
           className={`rounded-lg px-3 py-2 font-medium transition ${
-            mode === "login"
+            mode !== "signup"
               ? "bg-white text-zinc-900 shadow dark:bg-zinc-700 dark:text-zinc-100"
               : "text-zinc-600 dark:text-zinc-400"
           }`}
@@ -94,7 +127,7 @@ export default function AuthPage() {
         </button>
         <button
           type="button"
-          onClick={() => setMode("signup")}
+          onClick={() => switchMode("signup")}
           className={`rounded-lg px-3 py-2 font-medium transition ${
             mode === "signup"
               ? "bg-white text-zinc-900 shadow dark:bg-zinc-700 dark:text-zinc-100"
@@ -122,22 +155,39 @@ export default function AuthPage() {
           />
         </div>
 
-        <div className="space-y-1">
-          <label htmlFor="password" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-            Password
-          </label>
-          <input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm outline-none ring-emerald-500 transition focus:ring dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder:text-zinc-500"
-            placeholder="Enter your password"
-            autoComplete={mode === "login" ? "current-password" : "new-password"}
-            minLength={6}
-            required
-          />
-        </div>
+        {mode === "forgot" ? (
+          <p className="text-sm text-zinc-600 dark:text-zinc-400">
+            We&apos;ll email you a link to set a new password.
+          </p>
+        ) : (
+          <div className="space-y-1">
+            <div className="flex items-baseline justify-between gap-2">
+              <label htmlFor="password" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                Password
+              </label>
+              {mode === "login" ? (
+                <button
+                  type="button"
+                  onClick={() => switchMode("forgot")}
+                  className="text-xs font-medium text-zinc-600 underline underline-offset-4 transition hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+                >
+                  Forgot password?
+                </button>
+              ) : null}
+            </div>
+            <input
+              id="password"
+              type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm outline-none ring-emerald-500 transition focus:ring dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100 dark:placeholder:text-zinc-500"
+              placeholder="Enter your password"
+              autoComplete={mode === "login" ? "current-password" : "new-password"}
+              minLength={6}
+              required
+            />
+          </div>
+        )}
 
         {error ? <p className="text-sm text-red-600 dark:text-red-400">{error}</p> : null}
         {message ? <p className="text-sm text-emerald-700 dark:text-emerald-400">{message}</p> : null}
@@ -151,9 +201,22 @@ export default function AuthPage() {
         </button>
       </form>
 
-      <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-400">
-        New here? Choose <span className="font-medium">Sign up</span>. Already have an account? Use <span className="font-medium">Log in</span>.
-      </p>
+      {mode === "forgot" ? (
+        <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-400">
+          Remembered it?{" "}
+          <button
+            type="button"
+            onClick={() => switchMode("login")}
+            className="font-medium text-zinc-900 underline underline-offset-4 dark:text-zinc-100"
+          >
+            Back to log in
+          </button>
+        </p>
+      ) : (
+        <p className="mt-4 text-sm text-zinc-600 dark:text-zinc-400">
+          New here? Choose <span className="font-medium">Sign up</span>. Already have an account? Use <span className="font-medium">Log in</span>.
+        </p>
+      )}
 
       <Link href="/" className="mt-6 text-sm text-zinc-700 underline underline-offset-4 dark:text-zinc-300">
         Back to landing page
