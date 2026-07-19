@@ -79,7 +79,7 @@ export default function AuthPage() {
       if (signUpError) {
         setError(signUpError.message);
       } else {
-        setMessage("Account created. Check your email if confirmation is enabled.");
+        setMessage("Account created. Check your email for a confirmation link before logging in.");
       }
 
       setLoading(false);
