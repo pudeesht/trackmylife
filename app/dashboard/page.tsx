@@ -31,6 +31,8 @@ import { StreakBadge } from "@/components/dashboard/StreakBadge";
 import { TimeViewToggle } from "@/components/dashboard/TimeViewToggle";
 import { TrendsCard } from "@/components/dashboard/TrendsCard";
 import { WeeklyPriorityCard } from "@/components/dashboard/WeeklyPriorityCard";
+import { WhatsNewList } from "@/components/changelog/WhatsNewList";
+import { LATEST_CHANGELOG_ID } from "@/components/changelog/changelog-data";
 
 function getEmailPrefix(email: string): string {
   const [prefix] = email.split("@");
@@ -75,6 +77,23 @@ export default function DashboardPage() {
   const [profileIsPublic, setProfileIsPublic] = useState<boolean>(false);
   const [activeUtilityPanel, setActiveUtilityPanel] = useState<UtilityPanel>("none");
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isWhatsNewOpen, setIsWhatsNewOpen] = useState(false);
+  // Highest changelog id this browser has already seen; drives the "new" dot.
+  // Read lazily on mount (guarded for SSR, where the header isn't rendered yet).
+  const [seenChangelogId, setSeenChangelogId] = useState<number>(() => {
+    if (typeof window === "undefined") return LATEST_CHANGELOG_ID;
+    const stored = Number.parseInt(window.localStorage.getItem("changelogSeenId") ?? "", 10);
+    return Number.isFinite(stored) ? stored : 0;
+  });
+  const hasUnseenUpdates = LATEST_CHANGELOG_ID > seenChangelogId;
+
+  function openWhatsNew() {
+    setActiveUtilityPanel("none");
+    setIsSettingsOpen(false);
+    setIsWhatsNewOpen(true);
+    window.localStorage.setItem("changelogSeenId", String(LATEST_CHANGELOG_ID));
+    setSeenChangelogId(LATEST_CHANGELOG_ID);
+  }
 
   const today = useMemo(() => new Date(), []);
   const currentYear = today.getFullYear();
@@ -160,6 +179,17 @@ export default function DashboardPage() {
       await loadEntries(data.session.user.id);
       await loadWeeklyPriorities(data.session.user.id);
       setIsCheckingSession(false);
+
+      // Surface release notes once per new release: open them automatically
+      // when there's an entry this browser hasn't seen, then mark seen so it
+      // won't reopen until the next update. Read localStorage fresh here to
+      // avoid depending on render state inside this async flow.
+      const seen = Number.parseInt(window.localStorage.getItem("changelogSeenId") ?? "", 10);
+      if (!Number.isFinite(seen) || LATEST_CHANGELOG_ID > seen) {
+        setIsWhatsNewOpen(true);
+        window.localStorage.setItem("changelogSeenId", String(LATEST_CHANGELOG_ID));
+        setSeenChangelogId(LATEST_CHANGELOG_ID);
+      }
     }
 
     loadSession();
@@ -403,6 +433,21 @@ export default function DashboardPage() {
 
                 <button
                   type="button"
+                  onClick={openWhatsNew}
+                  className={`relative rounded-lg px-3 py-1.5 text-xs font-semibold uppercase tracking-wide transition ${
+                    isWhatsNewOpen
+                      ? "bg-emerald-600 text-white shadow-sm"
+                      : "border border-zinc-200 text-zinc-600 hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:border-zinc-600 dark:hover:bg-zinc-800"
+                  }`}
+                >
+                  What&apos;s new
+                  {hasUnseenUpdates ? (
+                    <span className="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-zinc-900" />
+                  ) : null}
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => {
                     setActiveUtilityPanel("none");
                     setIsSettingsOpen(true);
@@ -521,6 +566,14 @@ export default function DashboardPage() {
             }}
           />
         ) : null}
+      </SettingsModal>
+
+      <SettingsModal
+        open={isWhatsNewOpen}
+        title="What's new"
+        onClose={() => setIsWhatsNewOpen(false)}
+      >
+        <WhatsNewList />
       </SettingsModal>
 
       <DayDetailModal
