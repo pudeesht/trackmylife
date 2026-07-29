@@ -18,6 +18,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: 6,
+    date: "2026-07-30",
+    tag: "new",
+    title: "Track your own metrics",
+    description:
+      "Create up to two custom metrics — like water, distance run, or deep-work minutes — log them each day (decimals welcome), and watch them trend alongside bedtime and Instagram.",
+  },
+  {
     id: 5,
     date: "2026-07-21",
     tag: "new",

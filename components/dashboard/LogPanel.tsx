@@ -2,13 +2,15 @@
 
 import React, { useEffect, useState } from "react";
 import { getScoreColor } from "@/components/dashboard/dashboard-helpers";
-import type { DailyEntry } from "@/components/dashboard/dashboard-types";
+import type { DailyEntry, MetricDefinition } from "@/components/dashboard/dashboard-types";
 
 export type LogEntryPayload = {
   note: string;
   priorityUpdate: string;
   bedtime: string;
   instagram: string;
+  // metric_id -> raw input string ("" means "not logged / clear").
+  customMetrics: Record<number, string>;
 };
 
 type LogPanelProps = {
@@ -26,6 +28,9 @@ type LogPanelProps = {
   initialPriorityUpdate: string;
   initialBedtime: string;
   initialInstagram: string;
+  metricDefs: MetricDefinition[];
+  initialMetricValues: Record<number, string>;
+  onManageMetrics: () => void;
   onSubmit: (event: React.FormEvent<HTMLFormElement>, payload: LogEntryPayload) => void;
 };
 
@@ -44,13 +49,19 @@ function LogPanelInner({
   initialPriorityUpdate,
   initialBedtime,
   initialInstagram,
+  metricDefs,
+  initialMetricValues,
+  onManageMetrics,
   onSubmit,
 }: LogPanelProps) {
   const [draftNote, setDraftNote] = useState(initialNote);
   const [draftPriorityUpdate, setDraftPriorityUpdate] = useState(initialPriorityUpdate);
   const [draftBedtime, setDraftBedtime] = useState(initialBedtime);
   const [draftInstagram, setDraftInstagram] = useState(initialInstagram);
+  const [draftMetrics, setDraftMetrics] = useState<Record<number, string>>(initialMetricValues);
   const [showExtras, setShowExtras] = useState(Boolean(initialBedtime || initialInstagram));
+  const hasMetricValues = Object.values(initialMetricValues).some((value) => value !== "");
+  const [showMetrics, setShowMetrics] = useState(hasMetricValues);
 
   // Re-seed all drafts when navigating to a different date (not while typing).
   useEffect(() => {
@@ -58,7 +69,9 @@ function LogPanelInner({
     setDraftPriorityUpdate(initialPriorityUpdate);
     setDraftBedtime(initialBedtime);
     setDraftInstagram(initialInstagram);
+    setDraftMetrics(initialMetricValues);
     setShowExtras(Boolean(initialBedtime || initialInstagram));
+    setShowMetrics(Object.values(initialMetricValues).some((value) => value !== ""));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate]);
 
@@ -71,6 +84,7 @@ function LogPanelInner({
             priorityUpdate: draftPriorityUpdate,
             bedtime: draftBedtime,
             instagram: draftInstagram,
+            customMetrics: draftMetrics,
           });
         }}
         className="space-y-5"
@@ -185,6 +199,63 @@ function LogPanelInner({
                   className="mt-1 w-full rounded-lg border border-zinc-300 px-2.5 py-2 text-sm outline-none ring-emerald-500 transition focus:ring-2 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
                 />
               </label>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="rounded-lg border border-zinc-200 dark:border-zinc-800">
+          <button
+            type="button"
+            onClick={() => setShowMetrics((value) => !value)}
+            className="flex w-full items-center justify-between gap-2 px-3 py-2 text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400 transition hover:text-zinc-800 dark:hover:text-zinc-200"
+          >
+            <span className="flex items-center gap-2">
+              Custom metrics
+              {!showMetrics && hasMetricValues ? (
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden />
+              ) : null}
+            </span>
+            <span aria-hidden>{showMetrics ? "▾" : "▸"}</span>
+          </button>
+
+          {showMetrics ? (
+            <div className="border-t border-zinc-100 p-3 dark:border-zinc-800">
+              {metricDefs.length ? (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {metricDefs.map((metric) => (
+                    <label
+                      key={metric.id}
+                      className="block text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400"
+                    >
+                      {metric.name}
+                      {metric.kind === "duration" ? " (min)" : metric.unit ? ` (${metric.unit})` : ""}
+                      <input
+                        type="number"
+                        min={0}
+                        step="any"
+                        inputMode="decimal"
+                        value={draftMetrics[metric.id] ?? ""}
+                        onChange={(event) =>
+                          setDraftMetrics((prev) => ({ ...prev, [metric.id]: event.target.value }))
+                        }
+                        placeholder={metric.kind === "duration" ? "e.g. 30" : "e.g. 3"}
+                        className="mt-1 w-full rounded-lg border border-zinc-300 px-2.5 py-2 text-sm outline-none ring-emerald-500 transition focus:ring-2 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                      />
+                    </label>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                  No custom metrics yet. Create one to start tracking it here.
+                </p>
+              )}
+              <button
+                type="button"
+                onClick={onManageMetrics}
+                className="mt-3 text-xs font-semibold text-emerald-700 underline-offset-2 transition hover:underline dark:text-emerald-400"
+              >
+                Manage metrics
+              </button>
             </div>
           ) : null}
         </div>

@@ -3,15 +3,20 @@
 import { useMemo, useState } from "react";
 import {
   bedtimeToLatenessMinutes,
+  formatMetricValue,
   formatMinutesShort,
   latenessToClockLabel,
   toDateKey,
 } from "@/components/dashboard/dashboard-helpers";
 import { MetricTrendChart, type TrendPoint } from "@/components/dashboard/MetricTrendChart";
-import type { DailyEntry } from "@/components/dashboard/dashboard-types";
+import type { DailyEntry, MetricDefinition, MetricValue } from "@/components/dashboard/dashboard-types";
 
 type TrendsCardProps = {
   entries: DailyEntry[];
+  // Custom metrics are dashboard-only for now; public profiles omit them, so
+  // these default to empty. Wiring public exposure is future scope (is_public).
+  metricDefs?: MetricDefinition[];
+  metricValues?: MetricValue[];
   today: Date;
 };
 
@@ -20,13 +25,15 @@ type Range = (typeof RANGES)[number];
 
 const BEDTIME_COLOR = "#6366f1"; // indigo — sleep/night
 const INSTAGRAM_COLOR = "#f43f5e"; // rose — screen time
+// Palette for custom metrics, distinct from the two built-ins above.
+const CUSTOM_COLORS = ["#10b981", "#f59e0b"]; // emerald, amber
 
 function windowStart(today: Date, days: number): string {
   const start = new Date(today.getFullYear(), today.getMonth(), today.getDate() - (days - 1));
   return toDateKey(start);
 }
 
-export function TrendsCard({ entries, today }: TrendsCardProps) {
+export function TrendsCard({ entries, metricDefs = [], metricValues = [], today }: TrendsCardProps) {
   const [range, setRange] = useState<Range>(30);
 
   const endKey = toDateKey(today);
@@ -50,14 +57,31 @@ export function TrendsCard({ entries, today }: TrendsCardProps) {
     return { bedtimePoints: bedtime, instagramPoints: instagram };
   }, [entries, startKey, endKey]);
 
-  const hasAnyMetric = entries.some((e) => e.bedtime != null || e.instagram_minutes != null);
+  // One windowed, ascending series per active custom metric that has data.
+  const customSeries = useMemo(() => {
+    const pointsByMetric = new Map<number, TrendPoint[]>();
+    const inWindow = metricValues.filter((v) => v.entry_date >= startKey && v.entry_date <= endKey);
+    const sorted = [...inWindow].sort((a, b) => a.entry_date.localeCompare(b.entry_date));
+    for (const value of sorted) {
+      const list = pointsByMetric.get(value.metric_id) ?? [];
+      list.push({ dateKey: value.entry_date, value: value.value });
+      pointsByMetric.set(value.metric_id, list);
+    }
+
+    return metricDefs
+      .map((metric) => ({ metric, points: pointsByMetric.get(metric.id) ?? [] }))
+      .filter((series) => series.points.length > 0);
+  }, [metricDefs, metricValues, startKey, endKey]);
+
+  const hasAnyMetric =
+    entries.some((e) => e.bedtime != null || e.instagram_minutes != null) || customSeries.length > 0;
 
   return (
     <section className="mt-6 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-6 dark:border-zinc-800 dark:bg-zinc-900">
       <div className="flex items-center justify-between gap-4">
         <div>
           <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Trends</h2>
-          <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">How your bedtime &amp; Instagram time are moving</p>
+          <p className="mt-0.5 text-xs text-zinc-500 dark:text-zinc-400">How your tracked metrics are moving over time</p>
         </div>
         <div className="inline-flex rounded-xl bg-zinc-100 p-1 dark:bg-zinc-800">
           {RANGES.map((option) => (
@@ -105,6 +129,21 @@ export function TrendsCard({ entries, today }: TrendsCardProps) {
             formatValue={formatMinutesShort}
             yTickLabel={formatMinutesShort}
           />
+          {customSeries.map(({ metric, points }, index) => {
+            const format = (value: number) => formatMetricValue(metric.kind, value, metric.unit);
+            return (
+              <MetricTrendChart
+                key={metric.id}
+                title={metric.name}
+                color={CUSTOM_COLORS[index % CUSTOM_COLORS.length]}
+                points={points}
+                windowStartKey={startKey}
+                windowEndKey={endKey}
+                formatValue={format}
+                yTickLabel={format}
+              />
+            );
+          })}
         </div>
       )}
     </section>

@@ -371,3 +371,18 @@ export function formatMinutesShort(mins: number): string {
   const m = mins % 60;
   return m ? `${h}h ${m}m` : `${h}h`;
 }
+
+// Display formatting for a custom metric value. `duration` reuses the minutes
+// formatter (value is stored as minutes); `number` shows the raw value with an
+// optional unit suffix, e.g. 3 + "glasses" -> "3 glasses".
+export function formatMetricValue(
+  kind: "number" | "duration",
+  value: number,
+  unit: string | null
+): string {
+  if (kind === "duration") {
+    return formatMinutesShort(value);
+  }
+  const trimmed = unit?.trim();
+  return trimmed ? `${value} ${trimmed}` : String(value);
+}

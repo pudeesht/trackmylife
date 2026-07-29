@@ -16,9 +16,16 @@ import {
   toDateKey,
   weekStartKey,
 } from "@/components/dashboard/dashboard-helpers";
-import type { DailyEntry, ViewMode, WeeklyPriority } from "@/components/dashboard/dashboard-types";
+import type {
+  DailyEntry,
+  MetricDefinition,
+  MetricValue,
+  ViewMode,
+  WeeklyPriority,
+} from "@/components/dashboard/dashboard-types";
 import { HeatmapLegend } from "@/components/dashboard/HeatmapLegend";
 import { LogPanel, type LogEntryPayload } from "@/components/dashboard/LogPanel";
+import { MetricsManager } from "@/components/dashboard/MetricsManager";
 import { HeatmapMonth } from "@/components/dashboard/HeatmapMonth";
 import { HeatmapWeek } from "@/components/dashboard/HeatmapWeek";
 import { HeatmapYear } from "@/components/dashboard/HeatmapYear";
@@ -60,6 +67,9 @@ export default function DashboardPage() {
   const [isCheckingSession, setIsCheckingSession] = useState(true);
 
   const [entries, setEntries] = useState<DailyEntry[]>([]);
+  const [metricDefs, setMetricDefs] = useState<MetricDefinition[]>([]);
+  const [metricValues, setMetricValues] = useState<MetricValue[]>([]);
+  const [isMetricsOpen, setIsMetricsOpen] = useState(false);
   const [weeklyPriorities, setWeeklyPriorities] = useState<WeeklyPriority[]>([]);
   const [selectedDate, setSelectedDate] = useState(toDateKey());
   const [score, setScore] = useState<number>(7);
@@ -141,6 +151,28 @@ export default function DashboardPage() {
     setWeeklyPriorities((data ?? []) as WeeklyPriority[]);
   }, []);
 
+  const loadMetricDefinitions = useCallback(async (userId: string) => {
+    const { data } = await supabase
+      .from("metric_definitions")
+      .select("id, user_id, name, unit, kind, is_public, sort_order, archived, created_at, updated_at")
+      .eq("user_id", userId)
+      .eq("archived", false)
+      .order("sort_order", { ascending: true });
+
+    setMetricDefs((data ?? []) as MetricDefinition[]);
+  }, []);
+
+  const loadMetricValues = useCallback(async (userId: string) => {
+    const { data } = await supabase
+      .from("metric_values")
+      .select("id, user_id, metric_id, entry_date, value, created_at, updated_at")
+      .eq("user_id", userId)
+      .order("entry_date", { ascending: false })
+      .limit(1000);
+
+    setMetricValues((data ?? []) as MetricValue[]);
+  }, []);
+
   const loadProfile = useCallback(async (userId: string, fallbackEmail: string) => {
     const fallbackUsername = toUsernameCandidate(fallbackEmail);
     const { data, error } = await supabase
@@ -178,6 +210,8 @@ export default function DashboardPage() {
       await loadProfile(data.session.user.id, data.session.user.email ?? "");
       await loadEntries(data.session.user.id);
       await loadWeeklyPriorities(data.session.user.id);
+      await loadMetricDefinitions(data.session.user.id);
+      await loadMetricValues(data.session.user.id);
       setIsCheckingSession(false);
 
       // Surface release notes once per new release: open them automatically
@@ -207,19 +241,32 @@ export default function DashboardPage() {
       loadProfile(session.user.id, session.user.email ?? "");
       loadEntries(session.user.id);
       loadWeeklyPriorities(session.user.id);
+      loadMetricDefinitions(session.user.id);
+      loadMetricValues(session.user.id);
     });
 
     return () => {
       isMounted = false;
       subscription.unsubscribe();
     };
-  }, [loadEntries, loadWeeklyPriorities, loadProfile, router]);
+  }, [loadEntries, loadWeeklyPriorities, loadProfile, loadMetricDefinitions, loadMetricValues, router]);
 
   const email = user?.email ?? "";
   const username = useMemo(() => profileUsername || getEmailPrefix(email), [email, profileUsername]);
 
   const selectedEntry = entries.find((entry) => entry.entry_date === selectedDate);
   const recent = useMemo(() => getRecentEntries(entries), [entries]);
+
+  // metric_id -> stringified value for the selected date, feeding LogPanel inputs.
+  const selectedMetricValues = useMemo<Record<number, string>>(() => {
+    const map: Record<number, string> = {};
+    for (const value of metricValues) {
+      if (value.entry_date === selectedDate) {
+        map[value.metric_id] = String(value.value);
+      }
+    }
+    return map;
+  }, [metricValues, selectedDate]);
 
   const sortedEntries = useMemo(
     () => [...entries].sort((a, b) => a.entry_date.localeCompare(b.entry_date)),
@@ -308,8 +355,43 @@ export default function DashboardPage() {
       return;
     }
 
-    setFeedback("Saved. You can edit this date again anytime.");
+    // Persist custom metric values for this date: upsert filled-in numbers,
+    // clear (delete) any that were emptied. Only active metrics are considered.
+    const metricUpserts: { user_id: string; metric_id: number; entry_date: string; value: number }[] = [];
+    const metricClears: number[] = [];
+    for (const def of metricDefs) {
+      const raw = (payload.customMetrics[def.id] ?? "").trim();
+      if (raw === "") {
+        metricClears.push(def.id);
+        continue;
+      }
+      const parsed = Number(raw);
+      if (!Number.isFinite(parsed) || parsed < 0) {
+        continue; // ignore malformed input rather than blocking the whole save
+      }
+      metricUpserts.push({ user_id: user.id, metric_id: def.id, entry_date: selectedDate, value: parsed });
+    }
+
+    let metricError = false;
+    if (metricUpserts.length) {
+      const { error: valueError } = await supabase
+        .from("metric_values")
+        .upsert(metricUpserts, { onConflict: "user_id,metric_id,entry_date" });
+      metricError = metricError || Boolean(valueError);
+    }
+    if (metricClears.length) {
+      const { error: clearError } = await supabase
+        .from("metric_values")
+        .delete()
+        .eq("user_id", user.id)
+        .eq("entry_date", selectedDate)
+        .in("metric_id", metricClears);
+      metricError = metricError || Boolean(clearError);
+    }
+
+    setFeedback(metricError ? "Saved, but some custom metrics didn't update." : "Saved. You can edit this date again anytime.");
     await loadEntries(user.id);
+    await loadMetricValues(user.id);
     setIsSaving(false);
   }
 
@@ -515,7 +597,7 @@ export default function DashboardPage() {
             <HeatmapLegend />
           </section>
 
-          <TrendsCard entries={entries} today={today} />
+          <TrendsCard entries={entries} metricDefs={metricDefs} metricValues={metricValues} today={today} />
 
           <div className="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
             <LogPanel
@@ -535,6 +617,9 @@ export default function DashboardPage() {
               initialInstagram={
                 selectedEntry?.instagram_minutes != null ? String(selectedEntry.instagram_minutes) : ""
               }
+              metricDefs={metricDefs}
+              initialMetricValues={selectedMetricValues}
+              onManageMetrics={() => setIsMetricsOpen(true)}
               onSubmit={handleSaveEntry}
             />
 
@@ -574,6 +659,16 @@ export default function DashboardPage() {
         onClose={() => setIsWhatsNewOpen(false)}
       >
         <WhatsNewList />
+      </SettingsModal>
+
+      <SettingsModal open={isMetricsOpen} title="Custom metrics" onClose={() => setIsMetricsOpen(false)}>
+        {user ? (
+          <MetricsManager
+            userId={user.id}
+            metrics={metricDefs}
+            onChanged={() => loadMetricDefinitions(user.id)}
+          />
+        ) : null}
       </SettingsModal>
 
       <DayDetailModal
