@@ -1,7 +1,11 @@
 import { createClient } from "@supabase/supabase-js";
 import { checkRateLimit } from "@/lib/ratelimit";
 import { computeStats, getRecentEntries } from "@/components/dashboard/dashboard-helpers";
-import type { DailyEntry } from "@/components/dashboard/dashboard-types";
+import type {
+  DailyEntry,
+  MetricDefinition,
+  MetricValue,
+} from "@/components/dashboard/dashboard-types";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -72,6 +76,28 @@ export async function GET(
   const entries = (entriesData ?? []) as DailyEntry[];
   const currentYear = new Date().getFullYear();
 
+  // Custom metrics are public along with the rest of a public Daymap. Fetch the
+  // owner's active metrics and their values so the profile can trend them.
+  const { data: metricDefsData } = await serverSupabase
+    .from("metric_definitions")
+    .select("id, user_id, name, unit, kind, is_public, sort_order, archived, created_at, updated_at")
+    .eq("user_id", profile.user_id)
+    .eq("archived", false)
+    .order("sort_order", { ascending: true });
+
+  const metricDefs = (metricDefsData ?? []) as MetricDefinition[];
+
+  let metricValues: MetricValue[] = [];
+  if (metricDefs.length) {
+    const { data: metricValuesData } = await serverSupabase
+      .from("metric_values")
+      .select("id, user_id, metric_id, entry_date, value, created_at, updated_at")
+      .eq("user_id", profile.user_id)
+      .order("entry_date", { ascending: false })
+      .limit(1000);
+    metricValues = (metricValuesData ?? []) as MetricValue[];
+  }
+
   return Response.json({
     exists: true,
     username: profile.username,
@@ -79,5 +105,7 @@ export async function GET(
     stats: computeStats(entries, currentYear),
     recent: getRecentEntries(entries),
     entries,
+    metricDefs,
+    metricValues,
   });
 }

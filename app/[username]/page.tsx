@@ -13,7 +13,12 @@ import {
   getBestAndWorst,
   getScoreColor,
 } from "@/components/dashboard/dashboard-helpers";
-import type { DailyEntry, DashboardStats } from "@/components/dashboard/dashboard-types";
+import type {
+  DailyEntry,
+  DashboardStats,
+  MetricDefinition,
+  MetricValue,
+} from "@/components/dashboard/dashboard-types";
 
 type PublicProfileResponse = {
   exists: boolean;
@@ -22,6 +27,8 @@ type PublicProfileResponse = {
   stats?: DashboardStats;
   recent?: DailyEntry[];
   entries?: DailyEntry[];
+  metricDefs?: MetricDefinition[];
+  metricValues?: MetricValue[];
 };
 
 type ProfilePageProps = {
@@ -87,6 +94,8 @@ export default function PublicProfilePage({ params }: ProfilePageProps) {
   }, [routeUsername]);
 
   const entries = useMemo(() => profile?.entries ?? [], [profile]);
+  const metricDefs = useMemo(() => profile?.metricDefs ?? [], [profile]);
+  const metricValues = useMemo(() => profile?.metricValues ?? [], [profile]);
   const stats = profile?.stats;
   const sortedEntries = useMemo(
     () => [...entries].sort((a, b) => b.entry_date.localeCompare(a.entry_date)),
@@ -266,7 +275,7 @@ export default function PublicProfilePage({ params }: ProfilePageProps) {
           <HeatmapLegend />
         </section>
 
-        <TrendsCard entries={entries} today={today} />
+        <TrendsCard entries={entries} metricDefs={metricDefs} metricValues={metricValues} today={today} />
 
         <hr className="mt-8 border-zinc-200 dark:border-zinc-800" />
 
