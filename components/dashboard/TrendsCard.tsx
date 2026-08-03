@@ -13,8 +13,8 @@ import type { DailyEntry, MetricDefinition, MetricValue } from "@/components/das
 
 type TrendsCardProps = {
   entries: DailyEntry[];
-  // Custom metrics are dashboard-only for now; public profiles omit them, so
-  // these default to empty. Wiring public exposure is future scope (is_public).
+  // Optional so callers without custom metrics can omit them; both the
+  // dashboard and public profiles pass them through.
   metricDefs?: MetricDefinition[];
   metricValues?: MetricValue[];
   today: Date;

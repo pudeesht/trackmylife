@@ -1,8 +1,14 @@
 "use client";
 
-import { useEffect } from "react";
-import { formatDisplayDate, getScoreColor } from "@/components/dashboard/dashboard-helpers";
-import type { DailyEntry } from "@/components/dashboard/dashboard-types";
+import { useEffect, useMemo } from "react";
+import {
+  formatBedtime,
+  formatDisplayDate,
+  formatMetricValue,
+  formatMinutesShort,
+  getScoreColor,
+} from "@/components/dashboard/dashboard-helpers";
+import type { DailyEntry, MetricDefinition, MetricValue } from "@/components/dashboard/dashboard-types";
 
 type DayDetailModalProps = {
   entry: DailyEntry | null;
@@ -12,9 +18,60 @@ type DayDetailModalProps = {
   hasPrev: boolean;
   hasNext: boolean;
   weekPriority?: string | null;
+  // Custom metric definitions plus every logged value; the modal picks out the
+  // ones belonging to `entry.entry_date`.
+  metricDefs?: MetricDefinition[];
+  metricValues?: MetricValue[];
 };
 
-export function DayDetailModal({ entry, onClose, onPrev, onNext, hasPrev, hasNext, weekPriority }: DayDetailModalProps) {
+export function DayDetailModal({
+  entry,
+  onClose,
+  onPrev,
+  onNext,
+  hasPrev,
+  hasNext,
+  weekPriority,
+  metricDefs = [],
+  metricValues = [],
+}: DayDetailModalProps) {
+  // Built-in metrics live on the entry, custom ones are looked up by date.
+  // Definition order (sort_order) is preserved so the modal matches the log panel.
+  const metricRows = useMemo(() => {
+    if (!entry) {
+      return [];
+    }
+
+    const rows: { key: string; label: string; value: string }[] = [];
+
+    if (entry.bedtime) {
+      rows.push({ key: "bedtime", label: "Bedtime", value: formatBedtime(entry.bedtime) });
+    }
+    if (entry.instagram_minutes != null) {
+      rows.push({ key: "instagram", label: "Instagram", value: formatMinutesShort(entry.instagram_minutes) });
+    }
+
+    const valueByMetric = new Map<number, number>();
+    for (const value of metricValues) {
+      if (value.entry_date === entry.entry_date) {
+        valueByMetric.set(value.metric_id, value.value);
+      }
+    }
+
+    for (const metric of metricDefs) {
+      const value = valueByMetric.get(metric.id);
+      if (value != null) {
+        rows.push({
+          key: `metric-${metric.id}`,
+          label: metric.name,
+          value: formatMetricValue(metric.kind, value, metric.unit),
+        });
+      }
+    }
+
+    return rows;
+  }, [entry, metricDefs, metricValues]);
+
   useEffect(() => {
     if (!entry) {
       return;
@@ -64,6 +121,23 @@ export function DayDetailModal({ entry, onClose, onPrev, onNext, hasPrev, hasNex
           </div>
           <p className="text-sm text-zinc-600 dark:text-zinc-400">out of 10</p>
         </div>
+
+        {metricRows.length ? (
+          <div className="mt-4">
+            <p className="text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Metrics</p>
+            <dl className="mt-2 grid grid-cols-2 gap-2">
+              {metricRows.map((row) => (
+                <div
+                  key={row.key}
+                  className="rounded-lg border border-zinc-200 px-3 py-2 dark:border-zinc-800"
+                >
+                  <dt className="truncate text-xs text-zinc-500 dark:text-zinc-400">{row.label}</dt>
+                  <dd className="mt-0.5 text-sm font-semibold text-zinc-900 dark:text-zinc-100">{row.value}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        ) : null}
 
         <div className="mt-4">
           <p className="text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Note</p>

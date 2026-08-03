@@ -359,6 +359,8 @@ export default function PublicProfilePage({ params }: ProfilePageProps) {
         onNext={handleModalNext}
         hasPrev={hasPrevModalEntry}
         hasNext={hasNextModalEntry}
+        metricDefs={metricDefs}
+        metricValues={metricValues}
       />
     </>
   );

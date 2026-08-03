@@ -679,6 +679,8 @@ export default function DashboardPage() {
         hasPrev={hasPrevModalEntry}
         hasNext={hasNextModalEntry}
         weekPriority={activeModalWeekPriority}
+        metricDefs={metricDefs}
+        metricValues={metricValues}
       />
     </>
   );
