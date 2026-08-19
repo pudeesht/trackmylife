@@ -20,6 +20,11 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "TrackMyLife",
   description: "Rate each day from 1 to 10 and track life momentum with a heatmap.",
+  // Site-ownership verification for AdSense. Verification only — the site does
+  // not load the AdSense script and serves no ads.
+  other: {
+    "google-adsense-account": "ca-pub-7269279521296318",
+  },
 };
 
 export default function RootLayout({
