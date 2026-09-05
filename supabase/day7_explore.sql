@@ -38,6 +38,9 @@ as $$
   from public.profiles p
   join public.daily_entries e on e.user_id = p.user_id
   where p.is_public = true
+    -- Future-dated rows would otherwise win "last active" forever. One day of
+    -- slack, because entry dates are the user's local day and current_date is UTC.
+    and e.entry_date <= current_date + 1
   group by p.username
   -- Dormant profiles fall out of the feed entirely.
   having max(e.entry_date) > current_date - 30

@@ -15,6 +15,8 @@ export type LogEntryPayload = {
 
 type LogPanelProps = {
   selectedDate: string;
+  /** Latest loggable day (today) - the date input must not offer the future. */
+  maxDate: string;
   score: number;
   selectedEntry: DailyEntry | undefined;
   isSaving: boolean;
@@ -36,6 +38,7 @@ type LogPanelProps = {
 
 function LogPanelInner({
   selectedDate,
+  maxDate,
   score,
   selectedEntry,
   isSaving,
@@ -102,6 +105,7 @@ function LogPanelInner({
             <input
               type="date"
               value={selectedDate}
+              max={maxDate}
               onChange={(event) => onDateChange(event.target.value)}
               className="mt-1 w-full rounded-lg border border-zinc-300 px-2.5 py-2 text-sm outline-none ring-emerald-500 transition focus:ring-2 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
             />

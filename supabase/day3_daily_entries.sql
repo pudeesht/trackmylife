@@ -54,3 +54,13 @@ create policy "daily_entries_delete_own"
 on public.daily_entries
 for delete
 using (auth.uid() = user_id);
+
+-- Nothing is loggable in the future. The date input is client-side only, so a
+-- typed year (2222) used to land straight in the table and then dominate the
+-- explore feed's "last active" ranking. One day of slack: entry_date is the
+-- user's local day, while current_date here is UTC.
+alter table public.daily_entries
+  drop constraint if exists daily_entries_entry_date_not_future;
+alter table public.daily_entries
+  add constraint daily_entries_entry_date_not_future
+  check (entry_date <= current_date + 1) not valid;

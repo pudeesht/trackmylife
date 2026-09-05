@@ -106,6 +106,7 @@ export default function DashboardPage() {
   }
 
   const today = useMemo(() => new Date(), []);
+  const todayKey = useMemo(() => toDateKey(today), [today]);
   const currentYear = today.getFullYear();
 
   const loadEntries = useCallback(async (userId: string) => {
@@ -319,6 +320,11 @@ export default function DashboardPage() {
       return;
     }
 
+    if (selectedDate > todayKey) {
+      setError("You can only log days up to today.");
+      return;
+    }
+
     setIsSaving(true);
     setFeedback(null);
     setError(null);
@@ -452,9 +458,12 @@ export default function DashboardPage() {
   }
 
   function handleDateChange(nextDate: string) {
-    setSelectedDate(nextDate);
+    // The date input can be typed into directly, so a stray year (2222) is one
+    // keystroke away. Nothing is loggable in the future - clamp back to today.
+    const safeDate = nextDate > todayKey ? todayKey : nextDate;
+    setSelectedDate(safeDate);
 
-    const match = entries.find((entry) => entry.entry_date === nextDate);
+    const match = entries.find((entry) => entry.entry_date === safeDate);
     if (match) {
       setScore(match.score);
       setFeedback("Loaded previous entry for this date.");
@@ -602,6 +611,7 @@ export default function DashboardPage() {
           <div className="mt-6 grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
             <LogPanel
               selectedDate={selectedDate}
+              maxDate={todayKey}
               score={score}
               selectedEntry={selectedEntry}
               isSaving={isSaving}

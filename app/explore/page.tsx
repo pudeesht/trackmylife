@@ -40,6 +40,7 @@ function formatLastActive(lastEntryDate: string, todayKey: string): string {
   const diffMs = new Date(`${todayKey}T00:00:00`).getTime() - new Date(`${lastEntryDate}T00:00:00`).getTime();
   const diffDays = Math.round(diffMs / 86_400_000);
 
+  if (diffDays <= 0) return "Logged today";
   if (diffDays === 1) return "Logged yesterday";
   return `Logged ${diffDays} days ago`;
 }
