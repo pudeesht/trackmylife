@@ -1,7 +1,11 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { getScoreColor } from "@/components/dashboard/dashboard-helpers";
+import React, { useEffect, useRef, useState } from "react";
+import {
+  getScoreColor,
+  parseNotePoints,
+  serializeNotePoints,
+} from "@/components/dashboard/dashboard-helpers";
 import type { DailyEntry, MetricDefinition } from "@/components/dashboard/dashboard-types";
 
 export type LogEntryPayload = {
@@ -36,6 +40,19 @@ type LogPanelProps = {
   onSubmit: (event: React.FormEvent<HTMLFormElement>, payload: LogEntryPayload) => void;
 };
 
+// The note is stored as a single text column but written as a bullet list. The
+// budget is measured against the serialized note, so the "- " prefix and the
+// newline between points (3 chars per point) come out of it. Nothing but this
+// constant caps a note: the column is unbounded text and no API validates it.
+const NOTE_MAX_CHARS = 600;
+const MAX_POINTS = 20;
+
+// Always keep one row on screen, even for a day with no note yet.
+function toEditablePoints(note: string): string[] {
+  const points = parseNotePoints(note);
+  return points.length ? points : [""];
+}
+
 function LogPanelInner({
   selectedDate,
   maxDate,
@@ -57,7 +74,7 @@ function LogPanelInner({
   onManageMetrics,
   onSubmit,
 }: LogPanelProps) {
-  const [draftNote, setDraftNote] = useState(initialNote);
+  const [draftPoints, setDraftPoints] = useState<string[]>(() => toEditablePoints(initialNote));
   const [draftPriorityUpdate, setDraftPriorityUpdate] = useState(initialPriorityUpdate);
   const [draftBedtime, setDraftBedtime] = useState(initialBedtime);
   const [draftInstagram, setDraftInstagram] = useState(initialInstagram);
@@ -66,9 +83,14 @@ function LogPanelInner({
   const hasMetricValues = Object.values(initialMetricValues).some((value) => value !== "");
   const [showMetrics, setShowMetrics] = useState(hasMetricValues);
 
+  // Which point input takes the caret after the list changes shape (Enter
+  // added a row, backspace removed one, "Add point" appended one).
+  const pointInputs = useRef<(HTMLTextAreaElement | null)[]>([]);
+  const [focusPoint, setFocusPoint] = useState<number | null>(null);
+
   // Re-seed all drafts when navigating to a different date (not while typing).
   useEffect(() => {
-    setDraftNote(initialNote);
+    setDraftPoints(toEditablePoints(initialNote));
     setDraftPriorityUpdate(initialPriorityUpdate);
     setDraftBedtime(initialBedtime);
     setDraftInstagram(initialInstagram);
@@ -78,12 +100,87 @@ function LogPanelInner({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDate]);
 
+  useEffect(() => {
+    if (focusPoint == null) {
+      return;
+    }
+    pointInputs.current[focusPoint]?.focus();
+    setFocusPoint(null);
+  }, [focusPoint]);
+
+  // A point is a textarea so a long one wraps instead of scrolling sideways;
+  // each row is grown to fit its own content so the list has no inner scrollbars.
+  useEffect(() => {
+    for (const element of pointInputs.current) {
+      if (!element) {
+        continue;
+      }
+      element.style.height = "auto";
+      element.style.height = `${element.scrollHeight}px`;
+    }
+  }, [draftPoints]);
+
+  const serializedNote = serializeNotePoints(draftPoints);
+  const charsLeft = Math.max(0, NOTE_MAX_CHARS - serializedNote.length);
+
+  function updatePoint(index: number, value: string) {
+    // Nothing may type a newline into a point (Enter is intercepted below), but
+    // pasted multi-line text can. Split it so one pasted line is one point,
+    // rather than letting a newline silently become a point on the next load.
+    if (value.includes("\n")) {
+      const pasted = value
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((line) => line.length > 0);
+      setDraftPoints((prev) => {
+        const merged = [...prev.slice(0, index), ...(pasted.length ? pasted : [""]), ...prev.slice(index + 1)];
+        return merged.slice(0, MAX_POINTS);
+      });
+      setFocusPoint(Math.min(index + Math.max(pasted.length, 1) - 1, MAX_POINTS - 1));
+      return;
+    }
+
+    setDraftPoints((prev) => prev.map((point, i) => (i === index ? value : point)));
+  }
+
+  function addPointAfter(index: number) {
+    setDraftPoints((prev) => {
+      if (prev.length >= MAX_POINTS) {
+        return prev;
+      }
+      return [...prev.slice(0, index + 1), "", ...prev.slice(index + 1)];
+    });
+    setFocusPoint(Math.min(index + 1, MAX_POINTS - 1));
+  }
+
+  function removePoint(index: number) {
+    setDraftPoints((prev) => {
+      const next = prev.filter((_, i) => i !== index);
+      return next.length ? next : [""];
+    });
+    setFocusPoint(Math.max(0, index - 1));
+  }
+
+  function handlePointKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>, index: number) {
+    if (event.key === "Enter") {
+      // Enter starts the next point instead of submitting the form.
+      event.preventDefault();
+      addPointAfter(index);
+      return;
+    }
+
+    if (event.key === "Backspace" && draftPoints[index] === "" && draftPoints.length > 1) {
+      event.preventDefault();
+      removePoint(index);
+    }
+  }
+
   return (
     <aside className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-6 dark:border-zinc-800 dark:bg-zinc-900">
       <form
         onSubmit={(event) => {
           onSubmit(event, {
-            note: draftNote,
+            note: serializedNote,
             priorityUpdate: draftPriorityUpdate,
             bedtime: draftBedtime,
             instagram: draftInstagram,
@@ -136,18 +233,55 @@ function LogPanelInner({
           </div>
         </div>
 
-        <label className="block text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-          Note
-          <textarea
-            key={selectedDate}
-            value={draftNote}
-            onChange={(event) => setDraftNote(event.target.value)}
-            rows={weekPriority ? 7 : 10}
-            maxLength={500}
-            placeholder="Optional note..."
-            className="mt-1 w-full resize-y rounded-lg border border-zinc-300 px-2.5 py-2 text-sm outline-none ring-emerald-500 transition focus:ring-2 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
-          />
-        </label>
+        <div>
+          <div className="flex items-baseline justify-between gap-2">
+            <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Note</p>
+            <p className="text-[11px] text-zinc-400 dark:text-zinc-500">{charsLeft} left</p>
+          </div>
+
+          <ul className="mt-1.5 space-y-1.5">
+            {draftPoints.map((point, index) => (
+              <li key={index} className="flex items-start gap-2">
+                <span aria-hidden className="mt-4 h-1 w-1 shrink-0 rounded-full bg-zinc-400 dark:bg-zinc-500" />
+                <textarea
+                  ref={(element) => {
+                    pointInputs.current[index] = element;
+                  }}
+                  rows={1}
+                  value={point}
+                  onChange={(event) => updatePoint(index, event.target.value)}
+                  onKeyDown={(event) => handlePointKeyDown(event, index)}
+                  // The budget is shared across points, so any one row may only
+                  // grow into what is left of the whole note allowance.
+                  maxLength={point.length + charsLeft}
+                  aria-label={`Point ${index + 1}`}
+                  placeholder={index === 0 ? "What happened today?" : "Another point..."}
+                  className="min-w-0 flex-1 resize-none overflow-hidden rounded-lg border border-zinc-300 px-2.5 py-2 text-sm outline-none ring-emerald-500 transition focus:ring-2 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
+                />
+                <button
+                  type="button"
+                  onClick={() => removePoint(index)}
+                  aria-label={`Remove point ${index + 1}`}
+                  className="mt-0.5 shrink-0 rounded-lg px-2 py-1.5 text-sm text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-700 dark:text-zinc-500 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+                >
+                  ×
+                </button>
+              </li>
+            ))}
+          </ul>
+
+          <div className="mt-2 flex items-center justify-between gap-2">
+            <button
+              type="button"
+              onClick={() => addPointAfter(draftPoints.length - 1)}
+              disabled={draftPoints.length >= MAX_POINTS}
+              className="text-xs font-semibold text-emerald-700 underline-offset-2 transition hover:underline disabled:cursor-not-allowed disabled:text-zinc-400 disabled:no-underline dark:text-emerald-400 dark:disabled:text-zinc-600"
+            >
+              + Add point
+            </button>
+            <p className="text-[11px] text-zinc-400 dark:text-zinc-500">Enter for a new point</p>
+          </div>
+        </div>
 
         {weekPriority ? (
           <label className="block text-xs font-medium uppercase tracking-wide text-emerald-700 dark:text-emerald-400">

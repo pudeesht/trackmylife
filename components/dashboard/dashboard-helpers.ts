@@ -108,8 +108,7 @@ export function getCellTooltip(cell: DayCell): string {
     return `${dateLabel}\nNo entry logged`;
   }
 
-  const note = (cell.entry.note ?? "").trim();
-  const preview = note.length ? note.slice(0, 70) : "No note";
+  const preview = formatNoteInline(cell.entry.note) || "No note";
   return `${dateLabel}\nScore: ${cell.entry.score}/10\n${preview}`;
 }
 
@@ -406,4 +405,45 @@ export function formatMetricValue(
   }
   const trimmed = unit?.trim();
   return trimmed ? `${value} ${trimmed}` : String(value);
+}
+
+// ---------------------------------------------------------------------------
+// Note points
+//
+// A note is still a single text column, but it is written and read as a bullet
+// list: one point per line, stored as "- point". Older free-form notes parse
+// without a migration - every non-empty line becomes a point, and whatever
+// dashes or bullets people typed by hand are stripped so they are not rendered
+// twice.
+
+const NOTE_BULLET_PREFIX = /^[-*\u2022\u00b7]+\s*/;
+
+export function parseNotePoints(note: string | null | undefined): string[] {
+  return (note ?? "")
+    .split(/\r?\n/)
+    .map((line) => line.trim().replace(NOTE_BULLET_PREFIX, "").trim())
+    .filter((line) => line.length > 0);
+}
+
+export function serializeNotePoints(points: string[]): string {
+  return points
+    .map((point) => point.trim())
+    .filter((point) => point.length > 0)
+    .map((point) => `- ${point}`)
+    .join("\n");
+}
+
+// One-line preview for lists, cards and tooltips: points joined by a middot,
+// hard-clipped to maxLength. Returns "" when there is nothing to show, so the
+// caller picks its own empty label.
+export function formatNoteInline(
+  note: string | null | undefined,
+  maxLength = 70,
+  options?: { ellipsis?: boolean }
+): string {
+  const joined = parseNotePoints(note).join(" · ");
+  if (joined.length <= maxLength) {
+    return joined;
+  }
+  return options?.ellipsis ? `${joined.slice(0, maxLength)}...` : joined.slice(0, maxLength);
 }

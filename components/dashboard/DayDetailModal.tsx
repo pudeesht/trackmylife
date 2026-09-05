@@ -8,6 +8,7 @@ import {
   formatMinutesShort,
   getScoreColor,
 } from "@/components/dashboard/dashboard-helpers";
+import { NotePoints } from "@/components/dashboard/NotePoints";
 import type { DailyEntry, MetricDefinition, MetricValue } from "@/components/dashboard/dashboard-types";
 
 type DayDetailModalProps = {
@@ -141,9 +142,7 @@ export function DayDetailModal({
 
         <div className="mt-4">
           <p className="text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Note</p>
-          <p className="mt-2 whitespace-pre-wrap text-sm text-zinc-800 dark:text-zinc-200">
-            {entry.note?.trim().length ? entry.note : "No note added for this day."}
-          </p>
+          <NotePoints note={entry.note} emptyLabel="No note added for this day." className="mt-2" />
         </div>
 
         {entry.priority_update?.trim().length ? (

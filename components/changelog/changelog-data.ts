@@ -18,6 +18,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: 7,
+    date: "2026-08-31",
+    tag: "improved",
+    title: "Notes are bullet points now",
+    description:
+      "Write a day as separate points instead of one blob of text. Enter starts the next point, and your old notes carry over with one point per line.",
+  },
+  {
     id: 6,
     date: "2026-07-30",
     tag: "new",

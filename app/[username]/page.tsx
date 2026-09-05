@@ -5,11 +5,13 @@ import Link from "next/link";
 import { DayDetailModal } from "@/components/dashboard/DayDetailModal";
 import { HeatmapLegend } from "@/components/dashboard/HeatmapLegend";
 import { HeatmapYear } from "@/components/dashboard/HeatmapYear";
+import { NotePoints } from "@/components/dashboard/NotePoints";
 import { StatsGrid } from "@/components/dashboard/StatsGrid";
 import { TrendsCard } from "@/components/dashboard/TrendsCard";
 import {
   buildYearMonthBlocks,
   formatDisplayDate,
+  formatNoteInline,
   getBestAndWorst,
   getScoreColor,
 } from "@/components/dashboard/dashboard-helpers";
@@ -159,16 +161,7 @@ export default function PublicProfilePage({ params }: ProfilePageProps) {
   }
 
   function getNotePreview(note: string | null): string {
-    const clean = (note ?? "").trim();
-    if (!clean) {
-      return "No note";
-    }
-
-    if (clean.length <= 90) {
-      return clean;
-    }
-
-    return `${clean.slice(0, 90)}...`;
+    return formatNoteInline(note, 90, { ellipsis: true }) || "No note";
   }
 
   if (isLoading) {
@@ -337,9 +330,7 @@ export default function PublicProfilePage({ params }: ProfilePageProps) {
                   />
                   <div className="min-w-0">
                     <p className="text-sm text-zinc-600 dark:text-zinc-400">{formatDisplayDate(entry.entry_date)}</p>
-                    <p className="mt-1 whitespace-pre-wrap text-sm text-zinc-900 dark:text-zinc-100">
-                      {entry.note?.trim().length ? entry.note : "No note"}
-                    </p>
+                    <NotePoints note={entry.note} className="mt-1" />
                   </div>
                 </div>
 

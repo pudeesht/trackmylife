@@ -1,4 +1,4 @@
-import { formatDisplayDate } from "@/components/dashboard/dashboard-helpers";
+import { formatDisplayDate, formatNoteInline } from "@/components/dashboard/dashboard-helpers";
 import type { DailyEntry } from "@/components/dashboard/dashboard-types";
 
 type BestWorstSectionProps = {
@@ -22,7 +22,7 @@ function EntryList({ title, items, onOpen }: { title: string; items: DailyEntry[
           >
             <div>
               <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">{formatDisplayDate(entry.entry_date)}</p>
-              <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">{(entry.note ?? "No note").slice(0, 70)}</p>
+              <p className="mt-1 text-xs text-zinc-600 dark:text-zinc-400">{formatNoteInline(entry.note) || "No note"}</p>
             </div>
             <span className="rounded-full bg-zinc-100 px-2 py-1 text-xs font-semibold text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
               {entry.score}/10

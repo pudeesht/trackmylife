@@ -14,6 +14,9 @@ import {
   latenessToClockLabel,
   formatBedtime,
   formatMinutesShort,
+  parseNotePoints,
+  serializeNotePoints,
+  formatNoteInline,
 } from "./dashboard-helpers";
 import type { DailyEntry, DayCell } from "./dashboard-types";
 
@@ -231,5 +234,45 @@ describe("weekly priority week window", () => {
     expect(daysLeftInWeek("2026-03-01")).toBe(7);
     expect(daysLeftInWeek("2026-03-06")).toBe(2);
     expect(daysLeftInWeek("2026-03-07")).toBe(1);
+  });
+});
+
+describe("note points", () => {
+  it("splits a stored note into one point per line", () => {
+    expect(parseNotePoints("- ran 5k\n- shipped the explore feed")).toEqual([
+      "ran 5k",
+      "shipped the explore feed",
+    ]);
+  });
+
+  it("reads free-form notes written before points existed", () => {
+    expect(parseNotePoints("---asjlnk\n\n  sdijgkdkg  \n* bullet")).toEqual([
+      "asjlnk",
+      "sdijgkdkg",
+      "bullet",
+    ]);
+  });
+
+  it("treats an empty note as no points", () => {
+    expect(parseNotePoints(null)).toEqual([]);
+    expect(parseNotePoints("   \n  ")).toEqual([]);
+  });
+
+  it("round-trips through serialization", () => {
+    const points = ["ran 5k", "slept badly"];
+    expect(serializeNotePoints(points)).toBe("- ran 5k\n- slept badly");
+    expect(parseNotePoints(serializeNotePoints(points))).toEqual(points);
+  });
+
+  it("drops blank rows when serializing", () => {
+    expect(serializeNotePoints(["", "  ", "only one"])).toBe("- only one");
+    expect(serializeNotePoints([""])).toBe("");
+  });
+
+  it("previews points on one line and clips to the limit", () => {
+    expect(formatNoteInline("- ran 5k\n- slept badly")).toBe("ran 5k · slept badly");
+    expect(formatNoteInline("- ran 5k", 3)).toBe("ran");
+    expect(formatNoteInline("- ran 5k", 3, { ellipsis: true })).toBe("ran...");
+    expect(formatNoteInline(null)).toBe("");
   });
 });
