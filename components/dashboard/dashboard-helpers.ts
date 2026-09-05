@@ -28,6 +28,27 @@ export function weekStartKey(dateKey: string): string {
   return toDateKey(startOfWeek(fromDateKey(dateKey)));
 }
 
+// Moves a date key by a number of days, staying in local time.
+export function shiftDateKey(dateKey: string, days: number): string {
+  return toDateKey(addDays(fromDateKey(dateKey), days));
+}
+
+// "6 Sep – 12 Sep" for the Sunday-to-Saturday week starting at weekStart.
+export function formatWeekRange(weekStart: string): string {
+  const start = fromDateKey(weekStart);
+  const end = addDays(start, 6);
+  // Composed by hand rather than via a day+month locale format, which some
+  // runtimes render without the day number.
+  const short = (date: Date) => `${date.getDate()} ${date.toLocaleDateString(undefined, { month: "short" })}`;
+  return `${short(start)} – ${short(end)}`;
+}
+
+// Days left in the week that contains dateKey, counting that day itself.
+// Sunday (the first day) returns 7, Saturday returns 1.
+export function daysLeftInWeek(dateKey: string): number {
+  return 7 - fromDateKey(dateKey).getDay();
+}
+
 export function formatDisplayDate(value: string | Date, options?: { withWeekday?: boolean }): string {
   const date = typeof value === "string" ? fromDateKey(value) : value;
   const day = date.getDate();

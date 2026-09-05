@@ -7,6 +7,9 @@ import {
   getCellTooltip,
   getScoreColor,
   weekStartKey,
+  shiftDateKey,
+  formatWeekRange,
+  daysLeftInWeek,
   bedtimeToLatenessMinutes,
   latenessToClockLabel,
   formatBedtime,
@@ -209,5 +212,24 @@ describe("weekStartKey", () => {
     expect(weekStartKey("2026-03-07")).toBe("2026-03-01");
     // Crossing a month boundary stays correct.
     expect(weekStartKey("2026-03-02")).toBe("2026-03-01");
+  });
+});
+
+describe("weekly priority week window", () => {
+  it("moves date keys across month boundaries", () => {
+    expect(shiftDateKey("2026-03-01", -7)).toBe("2026-02-22");
+    expect(shiftDateKey("2026-02-22", 7)).toBe("2026-03-01");
+  });
+
+  it("labels the Sunday-to-Saturday range of a week", () => {
+    // 2026-03-01 is a Sunday; the week runs through Saturday 2026-03-07.
+    expect(formatWeekRange("2026-03-01")).toBe("1 Mar – 7 Mar");
+  });
+
+  it("counts the days left in the week, including today", () => {
+    // Sunday starts a fresh week, Saturday is its last day.
+    expect(daysLeftInWeek("2026-03-01")).toBe(7);
+    expect(daysLeftInWeek("2026-03-06")).toBe(2);
+    expect(daysLeftInWeek("2026-03-07")).toBe(1);
   });
 });

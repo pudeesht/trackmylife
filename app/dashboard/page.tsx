@@ -10,9 +10,11 @@ import {
   buildCurrentWeek,
   buildMonthGrid,
   buildYearMonthBlocks,
-  formatDisplayDate,
+  daysLeftInWeek,
+  formatWeekRange,
   getRecentEntries,
   getStreakStats,
+  shiftDateKey,
   toDateKey,
   weekStartKey,
 } from "@/components/dashboard/dashboard-helpers";
@@ -298,13 +300,16 @@ export default function DashboardPage() {
     () => new Map(weeklyPriorities.map((item) => [item.week_start, item.priority])),
     [weeklyPriorities]
   );
-  const currentWeekKey = useMemo(() => weekStartKey(toDateKey(today)), [today]);
+  const currentWeekKey = useMemo(() => weekStartKey(todayKey), [todayKey]);
   const currentWeekPriority = priorityByWeek.get(currentWeekKey) ?? null;
   const selectedWeekPriority = priorityByWeek.get(weekStartKey(selectedDate)) ?? null;
   const activeModalWeekPriority = activeModalEntry
     ? priorityByWeek.get(weekStartKey(activeModalEntry.entry_date)) ?? null
     : null;
-  const currentWeekLabel = `Week of ${formatDisplayDate(currentWeekKey)}`;
+  // The previous Sunday's priority, offered as a carry-over when the new week is still blank.
+  const previousWeekPriority = priorityByWeek.get(shiftDateKey(currentWeekKey, -7)) ?? null;
+  const currentWeekRangeLabel = formatWeekRange(currentWeekKey);
+  const daysLeftThisWeek = daysLeftInWeek(todayKey);
 
   async function handleLogout() {
     await supabase.auth.signOut();
@@ -564,6 +569,16 @@ export default function DashboardPage() {
             ) : null}
           </section>
 
+          <WeeklyPriorityCard
+            weekRangeLabel={currentWeekRangeLabel}
+            daysLeft={daysLeftThisWeek}
+            priority={currentWeekPriority}
+            previousPriority={previousWeekPriority}
+            weekCells={weekCells}
+            isSaving={isSavingPriority}
+            onSave={handleSaveWeeklyPriority}
+          />
+
           <section className="mt-6 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-6 dark:border-zinc-800 dark:bg-zinc-900">
             <div className="flex items-center justify-between gap-4">
               <TimeViewToggle mode={viewMode} onChange={setViewMode} />
@@ -591,15 +606,7 @@ export default function DashboardPage() {
               ) : null}
 
               {viewMode === "week" ? (
-                <>
-                  <WeeklyPriorityCard
-                    weekLabel={currentWeekLabel}
-                    priority={currentWeekPriority}
-                    isSaving={isSavingPriority}
-                    onSave={handleSaveWeeklyPriority}
-                  />
-                  <HeatmapWeek cells={weekCells} onCellClick={(cell) => openDayDetailByDate(cell.dateKey)} />
-                </>
+                <HeatmapWeek cells={weekCells} onCellClick={(cell) => openDayDetailByDate(cell.dateKey)} />
               ) : null}
             </div>
 
