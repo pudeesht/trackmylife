@@ -79,6 +79,7 @@ export default function DashboardPage() {
   const [isLoadingEntries, setIsLoadingEntries] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isSavingPriority, setIsSavingPriority] = useState(false);
+  const [isSavingRecap, setIsSavingRecap] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -117,7 +118,7 @@ export default function DashboardPage() {
 
     const { data, error: loadError } = await supabase
       .from("daily_entries")
-      .select("id, user_id, entry_date, score, note, priority_update, bedtime, instagram_minutes, created_at, updated_at")
+      .select("id, user_id, entry_date, score, note, bedtime, instagram_minutes, created_at, updated_at")
       .eq("user_id", userId)
       .order("entry_date", { ascending: false })
       .limit(500);
@@ -146,7 +147,7 @@ export default function DashboardPage() {
   const loadWeeklyPriorities = useCallback(async (userId: string) => {
     const { data } = await supabase
       .from("weekly_priorities")
-      .select("id, user_id, week_start, priority, created_at, updated_at")
+      .select("id, user_id, week_start, priority, recap, created_at, updated_at")
       .eq("user_id", userId)
       .order("week_start", { ascending: false })
       .limit(200);
@@ -302,12 +303,15 @@ export default function DashboardPage() {
   );
   const currentWeekKey = useMemo(() => weekStartKey(todayKey), [todayKey]);
   const currentWeekPriority = priorityByWeek.get(currentWeekKey) ?? null;
-  const selectedWeekPriority = priorityByWeek.get(weekStartKey(selectedDate)) ?? null;
   const activeModalWeekPriority = activeModalEntry
     ? priorityByWeek.get(weekStartKey(activeModalEntry.entry_date)) ?? null
     : null;
-  // The previous Sunday's priority, offered as a carry-over when the new week is still blank.
-  const previousWeekPriority = priorityByWeek.get(shiftDateKey(currentWeekKey, -7)) ?? null;
+  // Last week, for the carry-over offer and the recap prompt.
+  const previousWeekKey = shiftDateKey(currentWeekKey, -7);
+  const previousWeek = weeklyPriorities.find((item) => item.week_start === previousWeekKey) ?? null;
+  const previousWeekPriority = previousWeek?.priority ?? null;
+  const previousWeekRecap = previousWeek?.recap ?? null;
+  const previousWeekRangeLabel = formatWeekRange(previousWeekKey);
   const currentWeekRangeLabel = formatWeekRange(currentWeekKey);
   const daysLeftThisWeek = daysLeftInWeek(todayKey);
 
@@ -335,7 +339,6 @@ export default function DashboardPage() {
     setError(null);
 
     const cleanNote = payload.note.trim();
-    const cleanPriorityUpdate = payload.priorityUpdate.trim();
     const cleanBedtime = payload.bedtime.trim();
     const parsedInstagram = Number.parseInt(payload.instagram, 10);
     const instagramMinutes =
@@ -349,7 +352,6 @@ export default function DashboardPage() {
         entry_date: selectedDate,
         score,
         note: cleanNote.length ? cleanNote : null,
-        priority_update: cleanPriorityUpdate.length ? cleanPriorityUpdate : null,
         bedtime: cleanBedtime.length ? cleanBedtime : null,
         instagram_minutes: instagramMinutes,
       },
@@ -441,6 +443,39 @@ export default function DashboardPage() {
 
     await loadWeeklyPriorities(user.id);
     setIsSavingPriority(false);
+  }
+
+  // The recap belongs to the week that just ended, so it updates last week's
+  // row - which exists, because the prompt only shows when that week had a
+  // priority to recap against.
+  async function handleSaveWeekRecap(text: string) {
+    if (!user) {
+      setError("Please log in again.");
+      return;
+    }
+
+    const cleanRecap = text.trim();
+    if (!cleanRecap) {
+      return;
+    }
+
+    setIsSavingRecap(true);
+    setError(null);
+
+    const { error: recapError } = await supabase
+      .from("weekly_priorities")
+      .update({ recap: cleanRecap })
+      .eq("user_id", user.id)
+      .eq("week_start", previousWeekKey);
+
+    if (recapError) {
+      setError("Could not save last week's recap. Confirm supabase/day9_priority_points.sql has been run.");
+      setIsSavingRecap(false);
+      return;
+    }
+
+    await loadWeeklyPriorities(user.id);
+    setIsSavingRecap(false);
   }
 
   function openDayDetailByDate(dateKey: string) {
@@ -573,10 +608,14 @@ export default function DashboardPage() {
             weekRangeLabel={currentWeekRangeLabel}
             daysLeft={daysLeftThisWeek}
             priority={currentWeekPriority}
-            previousPriority={previousWeekPriority}
             weekCells={weekCells}
+            previousPriority={previousWeekPriority}
+            previousRecap={previousWeekRecap}
+            previousWeekRangeLabel={previousWeekRangeLabel}
             isSaving={isSavingPriority}
+            isSavingRecap={isSavingRecap}
             onSave={handleSaveWeeklyPriority}
+            onSaveRecap={handleSaveWeekRecap}
           />
 
           <section className="mt-6 rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-6 dark:border-zinc-800 dark:bg-zinc-900">
@@ -628,8 +667,6 @@ export default function DashboardPage() {
               onDateChange={handleDateChange}
               onScoreChange={setScore}
               initialNote={selectedEntry?.note ?? ""}
-              weekPriority={selectedWeekPriority}
-              initialPriorityUpdate={selectedEntry?.priority_update ?? ""}
               initialBedtime={selectedEntry?.bedtime ? selectedEntry.bedtime.slice(0, 5) : ""}
               initialInstagram={
                 selectedEntry?.instagram_minutes != null ? String(selectedEntry.instagram_minutes) : ""

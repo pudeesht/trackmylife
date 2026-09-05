@@ -408,13 +408,11 @@ export function formatMetricValue(
 }
 
 // ---------------------------------------------------------------------------
-// Note points
+// Points
 //
-// A note is still a single text column, but it is written and read as a bullet
-// list: one point per line, stored as "- point". Older free-form notes parse
-// without a migration - every non-empty line becomes a point, and whatever
-// dashes or bullets people typed by hand are stripped so they are not rendered
-// twice.
+// A structured list of points held in one text column, one per line as
+// "- point". Used by the weekly priority, which is always a list. Daily notes
+// are free text and use parseNoteBlocks below instead.
 
 const NOTE_BULLET_PREFIX = /^[-*\u2022\u00b7]+\s*/;
 
@@ -433,15 +431,50 @@ export function serializeNotePoints(points: string[]): string {
     .join("\n");
 }
 
-// One-line preview for lists, cards and tooltips: points joined by a middot,
-// hard-clipped to maxLength. Returns "" when there is nothing to show, so the
-// caller picks its own empty label.
+// ---------------------------------------------------------------------------
+// Note rendering
+//
+// A daily note is free text - write a paragraph if that is what the day was.
+// A line that opens with a dash is rendered as a bullet instead, so one note
+// can hold both. This is a display rule only: the note is stored exactly as it
+// was typed, which is why old notes written with hand-typed "---" prefixes,
+// and notes saved by the points editor as "- one per line", both read back
+// correctly with no migration.
+
+export type NoteBlock = { kind: "point" | "text"; text: string };
+
+export function parseNoteBlocks(note: string | null | undefined): NoteBlock[] {
+  const blocks: NoteBlock[] = [];
+
+  for (const line of (note ?? "").split(/\r?\n/)) {
+    const trimmed = line.trim();
+    if (!trimmed) {
+      continue;
+    }
+
+    const withoutMarker = trimmed.replace(NOTE_BULLET_PREFIX, "").trim();
+    if (withoutMarker === trimmed) {
+      blocks.push({ kind: "text", text: trimmed });
+    } else if (withoutMarker) {
+      // A line of nothing but dashes is a separator someone typed, not a point.
+      blocks.push({ kind: "point", text: withoutMarker });
+    }
+  }
+
+  return blocks;
+}
+
+// One-line preview for lists, cards and tooltips: the note flattened onto a
+// single line, markers stripped, hard-clipped to maxLength. Returns "" when
+// there is nothing to show, so the caller picks its own empty label.
 export function formatNoteInline(
   note: string | null | undefined,
   maxLength = 70,
   options?: { ellipsis?: boolean }
 ): string {
-  const joined = parseNotePoints(note).join(" · ");
+  const joined = parseNoteBlocks(note)
+    .map((block) => block.text)
+    .join(" · ");
   if (joined.length <= maxLength) {
     return joined;
   }

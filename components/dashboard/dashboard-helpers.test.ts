@@ -16,6 +16,7 @@ import {
   formatMinutesShort,
   parseNotePoints,
   serializeNotePoints,
+  parseNoteBlocks,
   formatNoteInline,
 } from "./dashboard-helpers";
 import type { DailyEntry, DayCell } from "./dashboard-types";
@@ -26,7 +27,6 @@ const makeEntry = (entry_date: string, score: number, note: string | null = null
   entry_date,
   score,
   note,
-  priority_update: null,
   bedtime: null,
   instagram_minutes: null,
   created_at: `${entry_date}T00:00:00Z`,
@@ -229,11 +229,55 @@ describe("weekly priority week window", () => {
     expect(formatWeekRange("2026-03-01")).toBe("1 Mar – 7 Mar");
   });
 
+  it("reads a priority written before points existed as a single point", () => {
+    // Every row already in weekly_priorities is one unprefixed line, which is
+    // why storing points in the same column needs no migration.
+    expect(parseNotePoints("Finish the auth flow")).toEqual(["Finish the auth flow"]);
+  });
+
+  it("round-trips up to three priority points", () => {
+    const points = ["ship the recap", "sleep before 1am", "run 20k"];
+    expect(parseNotePoints(serializeNotePoints(points))).toEqual(points);
+  });
+
   it("counts the days left in the week, including today", () => {
     // Sunday starts a fresh week, Saturday is its last day.
     expect(daysLeftInWeek("2026-03-01")).toBe(7);
     expect(daysLeftInWeek("2026-03-06")).toBe(2);
     expect(daysLeftInWeek("2026-03-07")).toBe(1);
+  });
+});
+
+describe("note blocks", () => {
+  it("renders a dash-prefixed line as a point and everything else as text", () => {
+    expect(parseNoteBlocks("rough morning\n-- shipped the feed\n-- ran 5k")).toEqual([
+      { kind: "text", text: "rough morning" },
+      { kind: "point", text: "shipped the feed" },
+      { kind: "point", text: "ran 5k" },
+    ]);
+  });
+
+  it("keeps a paragraph as a paragraph", () => {
+    expect(parseNoteBlocks("A whole day in one go, no dashes anywhere.")).toEqual([
+      { kind: "text", text: "A whole day in one go, no dashes anywhere." },
+    ]);
+  });
+
+  it("reads notes saved by the old points editor and by hand", () => {
+    // "- one per line" is what the points editor wrote; "---" is what people typed.
+    expect(parseNoteBlocks("- ran 5k\n---asjlnk\n* bullet")).toEqual([
+      { kind: "point", text: "ran 5k" },
+      { kind: "point", text: "asjlnk" },
+      { kind: "point", text: "bullet" },
+    ]);
+  });
+
+  it("drops blank lines and dash-only separators", () => {
+    expect(parseNoteBlocks("one\n\n   \n---\ntwo")).toEqual([
+      { kind: "text", text: "one" },
+      { kind: "text", text: "two" },
+    ]);
+    expect(parseNoteBlocks(null)).toEqual([]);
   });
 });
 
@@ -269,8 +313,10 @@ describe("note points", () => {
     expect(serializeNotePoints([""])).toBe("");
   });
 
-  it("previews points on one line and clips to the limit", () => {
+  it("previews a note on one line and clips to the limit", () => {
     expect(formatNoteInline("- ran 5k\n- slept badly")).toBe("ran 5k · slept badly");
+    expect(formatNoteInline("a plain paragraph")).toBe("a plain paragraph");
+    expect(formatNoteInline("mixed day\n-- and a point")).toBe("mixed day · and a point");
     expect(formatNoteInline("- ran 5k", 3)).toBe("ran");
     expect(formatNoteInline("- ran 5k", 3, { ellipsis: true })).toBe("ran...");
     expect(formatNoteInline(null)).toBe("");

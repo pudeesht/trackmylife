@@ -4,7 +4,6 @@ export type DailyEntry = {
   entry_date: string;
   score: number;
   note: string | null;
-  priority_update: string | null;
   bedtime: string | null;
   instagram_minutes: number | null;
   created_at: string;
@@ -42,11 +41,16 @@ export type MetricValue = {
   updated_at: string;
 };
 
+// One row per user per week (weeks run Sunday to Saturday). `priority` holds up
+// to MAX_PRIORITY_POINTS points in the same "- one per line" format as a daily
+// note, so a priority written before points existed reads back as one point.
+// `recap` is written on or after the Sunday that closes the week.
 export type WeeklyPriority = {
   id: number;
   user_id: string;
   week_start: string;
   priority: string;
+  recap: string | null;
   created_at: string;
   updated_at: string;
 };

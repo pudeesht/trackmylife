@@ -9,6 +9,7 @@ import {
   getScoreColor,
 } from "@/components/dashboard/dashboard-helpers";
 import { NotePoints } from "@/components/dashboard/NotePoints";
+import { PriorityChip } from "@/components/dashboard/PriorityChip";
 import type { DailyEntry, MetricDefinition, MetricValue } from "@/components/dashboard/dashboard-types";
 
 type DayDetailModalProps = {
@@ -18,6 +19,7 @@ type DayDetailModalProps = {
   onNext: () => void;
   hasPrev: boolean;
   hasNext: boolean;
+  /** The priority set for the week this day belongs to (up to three points). */
   weekPriority?: string | null;
   // Custom metric definitions plus every logged value; the modal picks out the
   // ones belonging to `entry.entry_date`.
@@ -145,18 +147,12 @@ export function DayDetailModal({
           <NotePoints note={entry.note} emptyLabel="No note added for this day." className="mt-2" />
         </div>
 
-        {entry.priority_update?.trim().length ? (
-          <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50/60 p-3 dark:border-emerald-900 dark:bg-emerald-950/40">
-            <p className="text-xs uppercase tracking-wide text-emerald-700 dark:text-emerald-400">
-              {weekPriority ? (
-                <>
-                  Update on: <span className="normal-case font-medium text-emerald-800 dark:text-emerald-300">{weekPriority}</span>
-                </>
-              ) : (
-                "Weekly priority update"
-              )}
+        {weekPriority ? (
+          <div className="mt-4">
+            <p className="text-xs uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+              Priority that week
             </p>
-            <p className="mt-2 whitespace-pre-wrap text-sm text-zinc-800 dark:text-zinc-200">{entry.priority_update}</p>
+            <PriorityChip priority={weekPriority} className="mt-2" />
           </div>
         ) : null}
 

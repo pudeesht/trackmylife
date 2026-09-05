@@ -18,12 +18,20 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: 8,
+    date: "2026-09-06",
+    tag: "improved",
+    title: "Your weekly priority, up front",
+    description:
+      "Set up to 3 priorities for the week - they now sit at the top of the dashboard in every view instead of hiding in the week tab. Each Sunday they clear for a fresh set, and you write one recap of how the week actually went instead of an update every single day.",
+  },
+  {
     id: 7,
     date: "2026-08-31",
     tag: "improved",
-    title: "Notes are bullet points now",
+    title: "Points in your daily note",
     description:
-      "Write a day as separate points instead of one blob of text. Enter starts the next point, and your old notes carry over with one point per line.",
+      "Start any line with -- and it shows up as a bullet point. Write a paragraph instead if that is more your thing - the note box takes both, and your old notes are untouched.",
   },
   {
     id: 6,
