@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { isBackdropTarget } from "./modal-events";
 
 type SettingsModalProps = {
   open: boolean;
@@ -19,7 +20,7 @@ export function SettingsModal({ open, title = "Settings", onClose, children }: S
       aria-modal="true"
       aria-label={title}
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) {
+        if (isBackdropTarget(event.target, event.currentTarget)) {
           onClose();
         }
       }}

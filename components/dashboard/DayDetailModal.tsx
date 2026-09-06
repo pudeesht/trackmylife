@@ -11,6 +11,7 @@ import {
 import { NotePoints } from "@/components/dashboard/NotePoints";
 import { PriorityChip } from "@/components/dashboard/PriorityChip";
 import type { DailyEntry, MetricDefinition, MetricValue } from "@/components/dashboard/dashboard-types";
+import { isBackdropTarget } from "./modal-events";
 
 type DayDetailModalProps = {
   entry: DailyEntry | null;
@@ -99,7 +100,17 @@ export function DayDetailModal({
   const scoreColor = getScoreColor(entry.score);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Day detail"
+      onMouseDown={(event) => {
+        if (isBackdropTarget(event.target, event.currentTarget)) {
+          onClose();
+        }
+      }}
+    >
       <div className="w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-6 shadow-2xl dark:border-zinc-800 dark:bg-zinc-900">
         <div className="flex items-start justify-between gap-4">
           <div>
